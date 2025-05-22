@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart AdSizer Lite</title>
+  <style>
+    /* Core styles */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f8f9fa;
+      color: #333;
+    }
+    h1, h2 { text-align: center; }
+    button {
+      background: #0d6efd;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #0b5ed7; }
+    button:disabled { background: #6c757d; cursor: not-allowed; }
+    .container { display: flex; flex-wrap: wrap; gap: 20px; }
+    .panel {
+      background: white;
+      border-radius: 5px;
+      padding: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    .drop-area {
+      border: 2px dashed #ccc;
+      border-radius: 5px;
+      padding: 25px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .drop-area:hover { background: #f1f3f5; }
+    input[type="number"] { 
+      width: 80px;
+      padding: 8px;
+      margin: 5px;
+    }
+    input[type="text"] { 
+      width: 150px;
+      padding: 8px;
+      margin: 5px;
+    }
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+    }
+    .preview-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .preview-image {
+      max-width: 100%;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+    }
+    img { max-width: 100%; }
+    .source-info {
+      text-align: center;
+      font-size: 14px;
+      color: #6c757d;
+    }
+  </style>
+</head>
+<body>
+  <h1>Smart AdSizer Lite</h1>
+  <p style="text-align: center;">Automatically crop images to popular ad formats</p>
+
+  <div class="container">
+    <div class="panel" style="flex: 2;">
+      <div id="upload-area" class="drop-area">
+        <p>Click or drop an image here</p>
+        <input type="file" id="file-input" accept="image/*" style="display:none;">
+      </div>
+      
+      <div id="source-preview" style="display:none; margin-top: 20px;">
+        <h2>Source Image</h2>
+        <div style="text-align: center;">
+          <img id="source-image" alt="Source">
+          <p id="source-info" class="source-info"></p>
+          <button id="change-image">Change Image</button>
+        </div>
+      </div>
+      
+      <div id="results-area" style="display:none; margin-top: 20px;">
+        <h2>Results</h2>
+        <div id="preview-grid" class="preview-grid"></div>
+        <div style="text-align: center; margin-top: 15px;">
+          <button id="download-all">Download All as ZIP</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="panel" style="flex: 1;">
+      <h2>Select Formats</h2>
+      <div id="format-selector" class="checkbox-group">
+        <label><input type="checkbox" value="instagram-square"> Instagram Square (1080×1080)</label>
+        <label><input type="checkbox" value="instagram-story"> Instagram Story (1080×1920)</label>
+        <label><input type="checkbox" value="facebook-feed"> Facebook Feed (1200×630)</label>
+        <label><input type="checkbox" value="facebook-story"> Facebook Story (1080×1920)</label>
+        <label><input type="checkbox" value="linkedin-banner"> LinkedIn Banner (1584×396)</label>
+      </div>
+      
+      <h2>Custom Size</h2>
+      <div>
+        <div>
+          <label>Width (px): <input type="number" id="custom-width" min="1" max="3000"></label>
+        </div>
+        <div>
+          <label>Height (px): <input type="number" id="custom-height" min="1" max="3000"></label>
+        </div>
+        <div>
+          <label>Name: <input type="text" id="custom-name" placeholder="e.g., Twitter Post"></label>
+        </div>
+        <button id="add-custom">Add Custom Format</button>
+      </div>
+      
+      <div style="margin-top: 20px;">
+        <button id="process-button" disabled>Process Image</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Global variables
+    let sourceImage = null;
+    let selectedFormats = [];
+    let customFormats = [];
+    let resultImages = [];
+    
+    // Predefined formats
+    const predefinedFormats = [
+      { id: 'instagram-square', name: 'Instagram Square', width: 1080, height: 1080 },
+      { id: 'instagram-story', name: 'Instagram Story', width: 1080, height: 1920 },
+      { id: 'facebook-feed', name: 'Facebook Feed', width: 1200, height: 630 },
+      { id: 'facebook-story', name: 'Facebook Story', width: 1080, height: 1920 },
+      { id: 'linkedin-banner', name: 'LinkedIn Banner', width: 1584, height: 396 }
+    ];
+    
+    // DOM Elements
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('file-input');
+    const sourcePreview = document.getElementById('source-preview');
+    const sourceImageEl = document.getElementById('source-image');
+    const sourceInfoEl = document.getElementById('source-info');
+    const changeImageBtn = document.getElementById('change-image');
+    const formatSelector = document.getElementById('format-selector');
+    const customWidthInput = document.getElementById('custom-width');
+    const customHeightInput = document.getElementById('custom-height');
+    const customNameInput = document.getElementById('custom-name');
+    const addCustomBtn = document.getElementById('add-custom');
+    const processBtn = document.getElementById('process-button');
+    const resultsArea = document.getElementById('results-area');
+    const previewGrid = document.getElementById('preview-grid');
+    const downloadAllBtn = document.getElementById('download-all');
+    
+    // Event Listeners
+    uploadArea.addEventListener('click', () => fileInput.click());
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.style.background = '#e9ecef';
+    });
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.style.background = '';
+    });
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.style.background = '';
+      handleFileUpload(e.dataTransfer.files[0]);
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) {
+        handleFileUpload(e.target.files[0]);
+      }
+    });
+    
+    changeImageBtn.addEventListener('click', () => {
+      sourceImage = null;
+      sourcePreview.style.display = 'none';
+      uploadArea.style.display = 'block';
+      updateProcessButton();
+      resultsArea.style.display = 'none';
+      resultImages = [];
+    });
+    
+    // Format selection changes
+    formatSelector.addEventListener('change', updateSelectedFormats);
+    
+    // Add custom format
+    addCustomBtn.addEventListener('click', () => {
+      const width = parseInt(customWidthInput.value);
+      const height = parseInt(customHeightInput.value);
+      const name = customNameInput.value.trim() || `Custom (${width}×${height})`;
+      
+      if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
+        alert('Please enter valid dimensions');
+        return;
+      }
+      
+      const id = `custom-${Date.now()}`;
+      const newFormat = { id, name, width, height };
+      customFormats.push(newFormat);
+      
+      // Add to UI
+      const newCheckbox = document.createElement('label');
+      newCheckbox.innerHTML = `<input type="checkbox" value="${id}" checked> ${name} (${width}×${height})`;
+      formatSelector.appendChild(newCheckbox);
+      
+      // Clear inputs
+      customWidthInput.value = '';
+      customHeightInput.value = '';
+      customNameInput.value = '';
+      
+      // Update selected formats
+      updateSelectedFormats();
+    });
+    
+    // Process button
+    processBtn.addEventListener('click', processImage);
+    
+    // Download all
+    downloadAllBtn.addEventListener('click', downloadAllImages);
+    
+    // Functions
+    function handleFileUpload(file) {
+      if (!file || !file.type.startsWith('image/')) {
+        alert('Please select a valid image file');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          sourceImage = {
+            element: img,
+            file: file,
+            src: e.target.result,
+            width: img.width,
+            height: img.height
+          };
+          
+          // Update UI
+          sourceImageEl.src = e.target.result;
+          sourceInfoEl.textContent = `${img.width} × ${img.height} pixels | ${(file.size / (1024 * 1024)).toFixed(2)} MB`;
+          sourcePreview.style.display = 'block';
+          uploadArea.style.display = 'none';
+          updateProcessButton();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+    
+    function updateSelectedFormats() {
+      selectedFormats = Array.from(formatSelector.querySelectorAll('input[type="checkbox"]:checked'))
+        .map(checkbox => {
+          const id = checkbox.value;
+          const predefined = predefinedFormats.find(f => f.id === id);
+          return predefined || customFormats.find(f => f.id === id);
+        });
+      
+      updateProcessButton();
+    }
+    
+    function updateProcessButton() {
+      processBtn.disabled = !sourceImage || selectedFormats.length === 0;
+    }
+    
+    async function processImage() {
+      if (!sourceImage || selectedFormats.length === 0) return;
+      
+      processBtn.disabled = true;
+      processBtn.textContent = 'Processing...';
+      
+      resultImages = [];
+      previewGrid.innerHTML = '';
+      
+      try {
+        for (const format of selectedFormats) {
+          const result = await cropImage(sourceImage.element, format);
+          resultImages.push({
+            format: format,
+            dataUrl: result,
+            name: `${format.name} (${format.width}×${format.height})`
+          });
+          
+          // Add to preview grid
+          const item = document.createElement('div');
+          item.className = 'preview-item';
+          item.innerHTML = `
+            <p>${format.name}</p>
+            <img src="${result}" alt="${format.name}" class="preview-image">
+            <button class="download-btn" data-index="${resultImages.length - 1}">Download</button>
+          `;
+          previewGrid.appendChild(item);
+          
+          // Add download event
+          item.querySelector('.download-btn').addEventListener('click', (e) => {
+            const index = parseInt(e.target.dataset.index);
+            downloadImage(resultImages[index]);
+          });
+        }
+        
+        resultsArea.style.display = 'block';
+      } catch (error) {
+        console.error('Error processing image:', error);
+        alert('An error occurred while processing the image');
+      } finally {
+        processBtn.disabled = false;
+        processBtn.textContent = 'Process Image';
+      }
+    }
+    
+    function cropImage(img, format) {
+      return new Promise(resolve => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = format.width;
+        canvas.height = format.height;
+        
+        // Calculate aspect ratios
+        const sourceRatio = img.width / img.height;
+        const targetRatio = format.width / format.height;
+        
+        let sw, sh, sx, sy;
+        
+        if (sourceRatio > targetRatio) {
+          // Source is wider than target
+          sh = img.height;
+          sw = sh * targetRatio;
+          sy = 0;
+          sx = (img.width - sw) / 2;
+        } else {
+          // Source is taller than target
+          sw = img.width;
+          sh = sw / targetRatio;
+          sx = 0;
+          sy = (img.height - sh) / 2;
+        }
+        
+        // Draw image centered
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, format.width, format.height);
+        
+        // Return data URL
+        resolve(canvas.toDataURL('image/jpeg', 0.9));
+      });
+    }
+    
+    function downloadImage(image) {
+      const link = document.createElement('a');
+      link.href = image.dataUrl;
+      link.download = `${image.format.name.replace(/\s+/g, '-').toLowerCase()}.jpg`;
+      link.click();
+    }
+    
+    async function downloadAllImages() {
+      if (resultImages.length === 0) return;
+      
+      // Check if browser supports local download or needs JSZip (included dynamically if needed)
+      if (resultImages.length === 1) {
+        downloadImage(resultImages[0]);
+        return;
+      }
+      
+      // For multiple files, load JSZip dynamically
+      if (typeof JSZip === 'undefined') {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+        script.onload = createZip;
+        document.head.appendChild(script);
+      } else {
+        createZip();
+      }
+      
+      async function createZip() {
+        const zip = new JSZip();
+        
+        for (const image of resultImages) {
+          const fileName = `${image.format.name.replace(/\s+/g, '-').toLowerCase()}.jpg`;
+          const base64Data = image.dataUrl.split(',')[1];
+          zip.file(fileName, base64Data, { base64: true });
+        }
+        
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'smart-adsizer-images.zip';
+        link.click();
+      }
+    }
+    
+    // Initialize
+    updateSelectedFormats();
+  </script>
+</body>
+</html>
