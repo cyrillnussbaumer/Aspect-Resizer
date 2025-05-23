@@ -175,6 +175,53 @@
       color: #6c757d;
     }
     
+    /* Image preview with focus point selector */
+    .image-preview-container {
+      position: relative;
+      margin: 15px auto;
+      max-width: 100%;
+      overflow: hidden;
+    }
+    
+    .image-preview-canvas {
+      display: block;
+      max-width: 100%;
+      max-height: 400px;
+      margin: 0 auto;
+      border: 1px solid #dee2e6;
+      cursor: crosshair;
+    }
+    
+    .focus-point {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      background: rgba(255, 0, 0, 0.5);
+      border: 2px solid red;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      display: none;
+    }
+    
+    .focus-rect {
+      position: absolute;
+      border: 2px dashed #ff3333;
+      background: rgba(255, 51, 51, 0.1);
+      pointer-events: none;
+      display: none;
+    }
+    
+    .focus-controls {
+      text-align: center;
+      margin-top: 10px;
+    }
+    
+    .focus-controls button {
+      font-size: 13px;
+      padding: 5px 10px;
+    }
+    
     /* Responsive adjustments */
     @media (max-width: 768px) {
       .container { flex-direction: column; }
@@ -195,7 +242,22 @@
       <div id="source-preview" style="display:none; margin-top: 20px;">
         <h2>Source Image</h2>
         <div style="text-align: center;">
-          <img id="source-image" alt="Source">
+          <img id="source-image" alt="Source" style="display:none;">
+          
+          <!-- Image Preview with Focus Point Selector -->
+          <div class="image-preview-container" id="preview-container">
+            <canvas id="preview-canvas" class="image-preview-canvas"></canvas>
+            <div id="focus-point" class="focus-point"></div>
+            <div id="focus-rect" class="focus-rect"></div>
+          </div>
+          
+          <div class="focus-controls">
+            <button id="clear-focus">Clear Focus Area</button>
+            <span style="margin: 0 10px; font-size: 13px; color: #6c757d;">
+              Click and drag to select focus area
+            </span>
+          </div>
+          
           <p id="source-info" class="source-info"></p>
           <button id="change-image">Change Image</button>
         </div>
@@ -262,6 +324,11 @@
             </div>
           </div>
         </div>
+        
+        <div class="crop-toggle" style="margin-top: 10px;">
+          <input type="checkbox" id="use-focus-area" checked>
+          <label for="use-focus-area">Prioritize Selected Focus Area</label>
+        </div>
       </div>
       
       <div style="margin-top: 20px;">
@@ -276,6 +343,13 @@
     let selectedFormats = [];
     let customFormats = [];
     let resultImages = [];
+    let focusArea = null;  // Will store the focus area coordinates
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
+    
+    // Canvas and context for the preview
+    let previewCanvas = document.getElementById('preview-canvas');
+    let previewCtx = previewCanvas.getContext('2d');
     
     // Predefined formats organized by platform
     const platforms = [
@@ -410,8 +484,13 @@
     const selectAllBtn = document.getElementById('select-all');
     const clearAllBtn = document.getElementById('clear-all');
     const useSmartcropToggle = document.getElementById('use-smartcrop');
+    const useFocusAreaToggle = document.getElementById('use-focus-area');
     const faceWeightInput = document.getElementById('face-weight');
     const edgeWeightInput = document.getElementById('edge-weight');
+    const previewContainer = document.getElementById('preview-container');
+    const focusPoint = document.getElementById('focus-point');
+    const focusRect = document.getElementById('focus-rect');
+    const clearFocusBtn = document.getElementById('clear-focus');
     
     // Build platform sections
     function buildFormatSelectors() {
@@ -525,7 +604,11 @@
       updateProcessButton();
       resultsArea.style.display = 'none';
       resultImages = [];
+      clearFocusArea();
     });
+    
+    // Clear focus area
+    clearFocusBtn.addEventListener('click', clearFocusArea);
     
     // Add custom format
     addCustomBtn.addEventListener('click', () => {
@@ -597,7 +680,109 @@
       updateSelectedFormats();
     });
     
+    // Preview canvas mouse events for focus point selection
+    previewCanvas.addEventListener('mousedown', (e) => {
+      const rect = previewCanvas.getBoundingClientRect();
+      const scaleX = previewCanvas.width / rect.width;
+      const scaleY = previewCanvas.height / rect.height;
+      
+      // Calculate mouse position relative to canvas
+      dragStart.x = (e.clientX - rect.left) * scaleX;
+      dragStart.y = (e.clientY - rect.top) * scaleY;
+      
+      isDragging = true;
+      
+      // Clear previous focus area
+      clearFocusArea();
+      
+      // Show focus rectangle
+      focusRect.style.display = 'block';
+      focusRect.style.left = `${e.clientX - rect.left}px`;
+      focusRect.style.top = `${e.clientY - rect.top}px`;
+      focusRect.style.width = '0';
+      focusRect.style.height = '0';
+    });
+    
+    previewCanvas.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      
+      const rect = previewCanvas.getBoundingClientRect();
+      const currentX = e.clientX - rect.left;
+      const currentY = e.clientY - rect.top;
+      
+      // Calculate rectangle dimensions
+      const startX = Math.min(currentX, dragStart.x / (previewCanvas.width / rect.width));
+      const startY = Math.min(currentY, dragStart.y / (previewCanvas.height / rect.height));
+      const width = Math.abs(currentX - dragStart.x / (previewCanvas.width / rect.width));
+      const height = Math.abs(currentY - dragStart.y / (previewCanvas.height / rect.height));
+      
+      // Update focus rectangle
+      focusRect.style.left = `${startX}px`;
+      focusRect.style.top = `${startY}px`;
+      focusRect.style.width = `${width}px`;
+      focusRect.style.height = `${height}px`;
+    });
+    
+    previewCanvas.addEventListener('mouseup', (e) => {
+      if (!isDragging) return;
+      
+      const rect = previewCanvas.getBoundingClientRect();
+      const scaleX = previewCanvas.width / rect.width;
+      const scaleY = previewCanvas.height / rect.height;
+      
+      // Calculate mouse position relative to canvas
+      const endX = (e.clientX - rect.left) * scaleX;
+      const endY = (e.clientY - rect.top) * scaleY;
+      
+      // Calculate focus area in image coordinates
+      focusArea = {
+        x: Math.min(dragStart.x, endX),
+        y: Math.min(dragStart.y, endY),
+        width: Math.abs(endX - dragStart.x),
+        height: Math.abs(endY - dragStart.y)
+      };
+      
+      // If the area is too small, treat it as a point
+      if (focusArea.width < 10 && focusArea.height < 10) {
+        const centerX = focusArea.x;
+        const centerY = focusArea.y;
+        
+        // Create a small region around the point
+        focusArea = {
+          x: centerX - 25,
+          y: centerY - 25,
+          width: 50,
+          height: 50
+        };
+        
+        // Show focus point indicator
+        focusPoint.style.display = 'block';
+        focusPoint.style.left = `${centerX / scaleX}px`;
+        focusPoint.style.top = `${centerY / scaleY}px`;
+        
+        // Hide focus rectangle
+        focusRect.style.display = 'none';
+      } else {
+        // Hide focus point, keep showing rectangle
+        focusPoint.style.display = 'none';
+      }
+      
+      isDragging = false;
+    });
+    
+    previewCanvas.addEventListener('mouseleave', () => {
+      if (isDragging) {
+        isDragging = false;
+      }
+    });
+    
     // Functions
+    function clearFocusArea() {
+      focusArea = null;
+      focusPoint.style.display = 'none';
+      focusRect.style.display = 'none';
+    }
+    
     function handleFileUpload(file) {
       if (!file || !file.type.startsWith('image/')) {
         alert('Please select a valid image file');
@@ -616,16 +801,49 @@
             height: img.height
           };
           
+          // Set up the preview canvas
+          setupPreviewCanvas(img);
+          
           // Update UI
-          sourceImageEl.src = e.target.result;
           sourceInfoEl.textContent = `${img.width} × ${img.height} pixels | ${(file.size / (1024 * 1024)).toFixed(2)} MB`;
           sourcePreview.style.display = 'block';
           uploadArea.style.display = 'none';
           updateProcessButton();
+          
+          // Clear any existing focus area
+          clearFocusArea();
         };
         img.src = e.target.result;
       };
       reader.readAsDataURL(file);
+    }
+    
+    function setupPreviewCanvas(img) {
+      // Determine canvas size while maintaining aspect ratio
+      const maxWidth = previewContainer.clientWidth;
+      const maxHeight = 400;
+      
+      let canvasWidth = img.width;
+      let canvasHeight = img.height;
+      
+      // Scale down if necessary
+      if (canvasWidth > maxWidth) {
+        const scale = maxWidth / canvasWidth;
+        canvasWidth = maxWidth;
+        canvasHeight = img.height * scale;
+      }
+      
+      if (canvasHeight > maxHeight) {
+        const scale = maxHeight / canvasHeight;
+        canvasHeight = maxHeight;
+        canvasWidth = canvasWidth * scale;
+      }
+      
+      previewCanvas.width = canvasWidth;
+      previewCanvas.height = canvasHeight;
+      
+      // Draw image on canvas
+      previewCtx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
     }
     
     function updateSelectedFormats() {
@@ -673,15 +891,23 @@
       
       try {
         const useSmartcrop = useSmartcropToggle.checked;
+        const useFocusArea = useFocusAreaToggle.checked && focusArea;
         const faceWeight = parseFloat(faceWeightInput.value);
         const edgeWeight = parseFloat(edgeWeightInput.value);
         
         for (const format of selectedFormats) {
           let result;
           
-          if (useSmartcrop) {
+          if (useSmartcrop && !useFocusArea) {
+            // Use SmartCrop.js alone
             result = await smartCropImage(sourceImage.element, format, { faceWeight, edgeWeight });
+          } else if (useFocusArea) {
+            // Use focus area with or without SmartCrop
+            result = await focusAreaCropImage(sourceImage.element, format, {
+              useSmartcrop, faceWeight, edgeWeight
+            });
           } else {
+            // Use basic center crop
             result = await basicCropImage(sourceImage.element, format);
           }
           
@@ -796,6 +1022,122 @@
             // Fallback to basic crop if SmartCrop fails
             resolve(basicCropImage(img, format));
           });
+      });
+    }
+    
+    // Focus area crop implementation
+    function focusAreaCropImage(img, format, options = {}) {
+      return new Promise(async (resolve) => {
+        // Convert canvas coordinates to original image coordinates
+        const scaleX = img.width / previewCanvas.width;
+        const scaleY = img.height / previewCanvas.height;
+        
+        const imageFocusArea = {
+          x: focusArea.x * scaleX,
+          y: focusArea.y * scaleY,
+          width: focusArea.width * scaleX,
+          height: focusArea.height * scaleY,
+          centerX: (focusArea.x + focusArea.width / 2) * scaleX,
+          centerY: (focusArea.y + focusArea.height / 2) * scaleY
+        };
+        
+        // Target aspect ratio
+        const targetRatio = format.width / format.height;
+        
+        // Use SmartCrop.js with the focus area as a boost region
+        if (options.useSmartcrop) {
+          const smartcropOptions = {
+            width: format.width,
+            height: format.height,
+            minScale: 1.0,
+            ruleOfThirds: false,  // Disable rule of thirds when focus area is used
+            boost: [
+              { name: 'face', weight: options.faceWeight * 0.5 || 0.4 }, // Reduce weight of faces
+              { name: 'edge', weight: options.edgeWeight * 0.5 || 0.2 }  // Reduce weight of edges
+            ],
+            boost: [{
+              x: imageFocusArea.x,
+              y: imageFocusArea.y,
+              width: imageFocusArea.width,
+              height: imageFocusArea.height,
+              weight: 1.0 // Give highest priority to focus area
+            }]
+          };
+          
+          try {
+            const result = await SmartCrop.crop(img, smartcropOptions);
+            
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = format.width;
+            canvas.height = format.height;
+            
+            const crop = result.topCrop;
+            
+            // Draw the cropped image
+            ctx.drawImage(
+              img,
+              crop.x, crop.y, crop.width, crop.height,
+              0, 0, format.width, format.height
+            );
+            
+            // Return data URL
+            resolve(canvas.toDataURL('image/jpeg', 0.9));
+          } catch (err) {
+            console.error('SmartCrop with focus area error:', err);
+            // Fallback to manual focus area crop
+            resolve(manualFocusAreaCrop(img, format, imageFocusArea));
+          }
+        } else {
+          // Manual focus area crop without SmartCrop
+          resolve(manualFocusAreaCrop(img, format, imageFocusArea));
+        }
+      });
+    }
+    
+    // Manual focus area crop (without SmartCrop)
+    function manualFocusAreaCrop(img, format, focusArea) {
+      return new Promise(resolve => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = format.width;
+        canvas.height = format.height;
+        
+        // Calculate aspect ratios
+        const sourceRatio = img.width / img.height;
+        const targetRatio = format.width / format.height;
+        
+        // Get the center of the focus area
+        const focusCenterX = focusArea.centerX;
+        const focusCenterY = focusArea.centerY;
+        
+        let cropWidth, cropHeight, cropX, cropY;
+        
+        if (sourceRatio > targetRatio) {
+          // Source is wider than target - crop width
+          cropHeight = img.height;
+          cropWidth = cropHeight * targetRatio;
+          
+          // Center horizontally on focus point, but don't go beyond image bounds
+          cropX = Math.max(0, Math.min(img.width - cropWidth, focusCenterX - cropWidth / 2));
+          cropY = 0;
+        } else {
+          // Source is taller than target - crop height
+          cropWidth = img.width;
+          cropHeight = cropWidth / targetRatio;
+          
+          // Center vertically on focus point, but don't go beyond image bounds
+          cropX = 0;
+          cropY = Math.max(0, Math.min(img.height - cropHeight, focusCenterY - cropHeight / 2));
+        }
+        
+        // Draw image centered on focus point
+        ctx.drawImage(img, cropX, cropY, cropWidth, cropHeight, 0, 0, format.width, format.height);
+        
+        // Return data URL
+        resolve(canvas.toDataURL('image/jpeg', 0.9));
       });
     }
     
