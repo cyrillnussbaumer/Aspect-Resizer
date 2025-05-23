@@ -85,15 +85,6 @@ The entire application can be embedded in an iframe or the code can be integrate
 - All processing happens on the client side, so performance depends on the user's device
 - SmartCrop.js adds intelligence with minimal performance impact
 
-## 🔮 Future Development Ideas
-
-- Advanced cropping with manual position adjustment
-- Text overlay options for common ad formats
-- Batch processing of multiple source images
-- Image optimization options (compression level, format conversion)
-- Filter and effect presets
-- Direct posting to social media platforms
-
 ## 👨‍💻 Author
 
 Created as an ultra-lightweight alternative to complex image editing tools specifically for social media marketers, content creators, and digital agencies.
