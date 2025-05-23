@@ -94,10 +94,6 @@ The entire application can be embedded in an iframe or the code can be integrate
 - Filter and effect presets
 - Direct posting to social media platforms
 
-## 📄 License
-
-MIT License - Feel free to use, modify, and distribute as needed.
-
 ## 👨‍💻 Author
 
 Created as an ultra-lightweight alternative to complex image editing tools specifically for social media marketers, content creators, and digital agencies.
