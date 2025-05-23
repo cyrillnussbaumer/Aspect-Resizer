@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart AdSizer Lite</title>
+  <!-- SmartCrop.js - loaded once from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/smartcrop/2.0.3/smartcrop.min.js"></script>
   <style>
     /* Core styles */
     body {
@@ -139,6 +141,40 @@
       to { transform: rotate(360deg); }
     }
     
+    /* Crop options */
+    .crop-options {
+      margin: 10px 0;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      border: 1px solid #dee2e6;
+    }
+    
+    .crop-toggle {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+    
+    .crop-settings {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    .crop-setting-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    
+    .crop-setting-group label {
+      font-size: 12px;
+      color: #6c757d;
+    }
+    
     /* Responsive adjustments */
     @media (max-width: 768px) {
       .container { flex-direction: column; }
@@ -203,6 +239,29 @@
       <div id="custom-formats" style="margin-top: 10px; display: none;">
         <h3>Custom Formats</h3>
         <div class="checkbox-group" id="custom-formats-container"></div>
+      </div>
+      
+      <div class="crop-options">
+        <div class="crop-toggle">
+          <input type="checkbox" id="use-smartcrop" checked>
+          <label for="use-smartcrop">Use SmartCrop.js (Content-Aware)</label>
+        </div>
+        
+        <div id="smartcrop-settings">
+          <p style="margin: 5px 0; font-size: 13px;">SmartCrop detects faces and important content</p>
+          
+          <div class="crop-settings">
+            <div class="crop-setting-group">
+              <label for="face-weight">Face Detection</label>
+              <input type="range" id="face-weight" min="0" max="1" step="0.1" value="0.9">
+            </div>
+            
+            <div class="crop-setting-group">
+              <label for="edge-weight">Edge Detection</label>
+              <input type="range" id="edge-weight" min="0" max="1" step="0.1" value="0.5">
+            </div>
+          </div>
+        </div>
       </div>
       
       <div style="margin-top: 20px;">
@@ -350,6 +409,9 @@
     const downloadAllBtn = document.getElementById('download-all');
     const selectAllBtn = document.getElementById('select-all');
     const clearAllBtn = document.getElementById('clear-all');
+    const useSmartcropToggle = document.getElementById('use-smartcrop');
+    const faceWeightInput = document.getElementById('face-weight');
+    const edgeWeightInput = document.getElementById('edge-weight');
     
     // Build platform sections
     function buildFormatSelectors() {
@@ -610,8 +672,19 @@
       previewGrid.innerHTML = '';
       
       try {
+        const useSmartcrop = useSmartcropToggle.checked;
+        const faceWeight = parseFloat(faceWeightInput.value);
+        const edgeWeight = parseFloat(edgeWeightInput.value);
+        
         for (const format of selectedFormats) {
-          const result = await cropImage(sourceImage.element, format);
+          let result;
+          
+          if (useSmartcrop) {
+            result = await smartCropImage(sourceImage.element, format, { faceWeight, edgeWeight });
+          } else {
+            result = await basicCropImage(sourceImage.element, format);
+          }
+          
           resultImages.push({
             format: format,
             dataUrl: result,
@@ -645,7 +718,8 @@
       }
     }
     
-    function cropImage(img, format) {
+    // Basic center crop (as a fallback)
+    function basicCropImage(img, format) {
       return new Promise(resolve => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -678,6 +752,50 @@
         
         // Return data URL
         resolve(canvas.toDataURL('image/jpeg', 0.9));
+      });
+    }
+    
+    // SmartCrop.js implementation
+    function smartCropImage(img, format, options = {}) {
+      return new Promise((resolve, reject) => {
+        // Create options for SmartCrop
+        const smartcropOptions = {
+          width: format.width,
+          height: format.height,
+          minScale: 1.0,
+          ruleOfThirds: true,
+          boost: [
+            { name: 'face', weight: options.faceWeight || 0.9 },
+            { name: 'edge', weight: options.edgeWeight || 0.5 }
+          ]
+        };
+        
+        // Use SmartCrop to analyze the image
+        SmartCrop.crop(img, smartcropOptions)
+          .then(result => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = format.width;
+            canvas.height = format.height;
+            
+            const crop = result.topCrop;
+            
+            // Draw the cropped image
+            ctx.drawImage(
+              img,
+              crop.x, crop.y, crop.width, crop.height,
+              0, 0, format.width, format.height
+            );
+            
+            // Return data URL
+            resolve(canvas.toDataURL('image/jpeg', 0.9));
+          })
+          .catch(err => {
+            console.error('SmartCrop error:', err);
+            // Fallback to basic crop if SmartCrop fails
+            resolve(basicCropImage(img, format));
+          });
       });
     }
     
