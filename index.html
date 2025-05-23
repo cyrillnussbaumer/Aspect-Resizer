@@ -181,6 +181,8 @@
       margin: 15px auto;
       max-width: 100%;
       overflow: hidden;
+      border: 1px solid #dee2e6;
+      background-color: #f1f3f5;
     }
     
     .image-preview-canvas {
@@ -188,7 +190,6 @@
       max-width: 100%;
       max-height: 400px;
       margin: 0 auto;
-      border: 1px solid #dee2e6;
       cursor: crosshair;
     }
     
@@ -242,11 +243,10 @@
       <div id="source-preview" style="display:none; margin-top: 20px;">
         <h2>Source Image</h2>
         <div style="text-align: center;">
-          <img id="source-image" alt="Source" style="display:none;">
-          
-          <!-- Image Preview with Focus Point Selector -->
+          <!-- Use a regular img element for the initial preview -->
           <div class="image-preview-container" id="preview-container">
-            <canvas id="preview-canvas" class="image-preview-canvas"></canvas>
+            <img id="preview-image" style="display:block; max-width:100%; max-height:400px; margin:0 auto;">
+            <canvas id="preview-canvas" class="image-preview-canvas" style="display:none;"></canvas>
             <div id="focus-point" class="focus-point"></div>
             <div id="focus-rect" class="focus-rect"></div>
           </div>
@@ -350,6 +350,7 @@
     // Canvas and context for the preview
     let previewCanvas = document.getElementById('preview-canvas');
     let previewCtx = previewCanvas.getContext('2d');
+    let previewImage = document.getElementById('preview-image');
     
     // Predefined formats organized by platform
     const platforms = [
@@ -467,7 +468,6 @@
     const uploadArea = document.getElementById('upload-area');
     const fileInput = document.getElementById('file-input');
     const sourcePreview = document.getElementById('source-preview');
-    const sourceImageEl = document.getElementById('source-image');
     const sourceInfoEl = document.getElementById('source-info');
     const changeImageBtn = document.getElementById('change-image');
     const formatSelector = document.getElementById('format-selector');
@@ -680,101 +680,130 @@
       updateSelectedFormats();
     });
     
-    // Preview canvas mouse events for focus point selection
-    previewCanvas.addEventListener('mousedown', (e) => {
-      const rect = previewCanvas.getBoundingClientRect();
-      const scaleX = previewCanvas.width / rect.width;
-      const scaleY = previewCanvas.height / rect.height;
-      
-      // Calculate mouse position relative to canvas
-      dragStart.x = (e.clientX - rect.left) * scaleX;
-      dragStart.y = (e.clientY - rect.top) * scaleY;
-      
-      isDragging = true;
-      
-      // Clear previous focus area
-      clearFocusArea();
-      
-      // Show focus rectangle
-      focusRect.style.display = 'block';
-      focusRect.style.left = `${e.clientX - rect.left}px`;
-      focusRect.style.top = `${e.clientY - rect.top}px`;
-      focusRect.style.width = '0';
-      focusRect.style.height = '0';
+    // COMPLETELY REVISED: Image loading and canvas interaction
+    
+    // When the image is first loaded, show it directly in an img tag
+    previewImage.addEventListener('load', function() {
+      // After image loads, initialize the canvas for interaction
+      initializeFocusCanvas();
     });
     
-    previewCanvas.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
+    function initializeFocusCanvas() {
+      if (!sourceImage) return;
       
-      const rect = previewCanvas.getBoundingClientRect();
-      const currentX = e.clientX - rect.left;
-      const currentY = e.clientY - rect.top;
+      // Set canvas dimensions to match the actual image
+      previewCanvas.width = sourceImage.width;
+      previewCanvas.height = sourceImage.height;
       
-      // Calculate rectangle dimensions
-      const startX = Math.min(currentX, dragStart.x / (previewCanvas.width / rect.width));
-      const startY = Math.min(currentY, dragStart.y / (previewCanvas.height / rect.height));
-      const width = Math.abs(currentX - dragStart.x / (previewCanvas.width / rect.width));
-      const height = Math.abs(currentY - dragStart.y / (previewCanvas.height / rect.height));
+      // Draw the image on the canvas
+      previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+      previewCtx.drawImage(sourceImage.element, 0, 0);
       
-      // Update focus rectangle
-      focusRect.style.left = `${startX}px`;
-      focusRect.style.top = `${startY}px`;
-      focusRect.style.width = `${width}px`;
-      focusRect.style.height = `${height}px`;
-    });
+      // Switch from img to canvas for interaction
+      previewImage.style.display = 'none';
+      previewCanvas.style.display = 'block';
+      
+      // Attach mouse events to canvas for focus selection
+      setupCanvasInteraction();
+    }
     
-    previewCanvas.addEventListener('mouseup', (e) => {
-      if (!isDragging) return;
-      
-      const rect = previewCanvas.getBoundingClientRect();
-      const scaleX = previewCanvas.width / rect.width;
-      const scaleY = previewCanvas.height / rect.height;
-      
-      // Calculate mouse position relative to canvas
-      const endX = (e.clientX - rect.left) * scaleX;
-      const endY = (e.clientY - rect.top) * scaleY;
-      
-      // Calculate focus area in image coordinates
-      focusArea = {
-        x: Math.min(dragStart.x, endX),
-        y: Math.min(dragStart.y, endY),
-        width: Math.abs(endX - dragStart.x),
-        height: Math.abs(endY - dragStart.y)
-      };
-      
-      // If the area is too small, treat it as a point
-      if (focusArea.width < 10 && focusArea.height < 10) {
-        const centerX = focusArea.x;
-        const centerY = focusArea.y;
+    function setupCanvasInteraction() {
+      // Preview canvas mouse events for focus point selection
+      previewCanvas.addEventListener('mousedown', (e) => {
+        const rect = previewCanvas.getBoundingClientRect();
+        const scaleX = previewCanvas.width / rect.width;
+        const scaleY = previewCanvas.height / rect.height;
         
-        // Create a small region around the point
+        // Calculate mouse position relative to canvas
+        dragStart.x = (e.clientX - rect.left) * scaleX;
+        dragStart.y = (e.clientY - rect.top) * scaleY;
+        
+        isDragging = true;
+        
+        // Clear previous focus area
+        clearFocusArea();
+        
+        // Show focus rectangle
+        focusRect.style.display = 'block';
+        focusRect.style.left = `${e.clientX - rect.left}px`;
+        focusRect.style.top = `${e.clientY - rect.top}px`;
+        focusRect.style.width = '0';
+        focusRect.style.height = '0';
+      });
+      
+      previewCanvas.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        const rect = previewCanvas.getBoundingClientRect();
+        const currentX = e.clientX - rect.left;
+        const currentY = e.clientY - rect.top;
+        
+        // Calculate rectangle dimensions
+        const startX = Math.min(currentX, dragStart.x / (previewCanvas.width / rect.width));
+        const startY = Math.min(currentY, dragStart.y / (previewCanvas.height / rect.height));
+        const width = Math.abs(currentX - dragStart.x / (previewCanvas.width / rect.width));
+        const height = Math.abs(currentY - dragStart.y / (previewCanvas.height / rect.height));
+        
+        // Update focus rectangle
+        focusRect.style.left = `${startX}px`;
+        focusRect.style.top = `${startY}px`;
+        focusRect.style.width = `${width}px`;
+        focusRect.style.height = `${height}px`;
+      });
+      
+      previewCanvas.addEventListener('mouseup', (e) => {
+        if (!isDragging) return;
+        
+        const rect = previewCanvas.getBoundingClientRect();
+        const scaleX = previewCanvas.width / rect.width;
+        const scaleY = previewCanvas.height / rect.height;
+        
+        // Calculate mouse position relative to canvas
+        const endX = (e.clientX - rect.left) * scaleX;
+        const endY = (e.clientY - rect.top) * scaleY;
+        
+        // Calculate focus area in image coordinates
         focusArea = {
-          x: centerX - 25,
-          y: centerY - 25,
-          width: 50,
-          height: 50
+          x: Math.min(dragStart.x, endX),
+          y: Math.min(dragStart.y, endY),
+          width: Math.abs(endX - dragStart.x),
+          height: Math.abs(endY - dragStart.y)
         };
         
-        // Show focus point indicator
-        focusPoint.style.display = 'block';
-        focusPoint.style.left = `${centerX / scaleX}px`;
-        focusPoint.style.top = `${centerY / scaleY}px`;
+        // If the area is too small, treat it as a point
+        if (focusArea.width < 10 && focusArea.height < 10) {
+          const centerX = focusArea.x;
+          const centerY = focusArea.y;
+          
+          // Create a small region around the point
+          focusArea = {
+            x: centerX - 25,
+            y: centerY - 25,
+            width: 50,
+            height: 50
+          };
+          
+          // Show focus point indicator
+          focusPoint.style.display = 'block';
+          focusPoint.style.left = `${centerX / scaleX}px`;
+          focusPoint.style.top = `${centerY / scaleY}px`;
+          
+          // Hide focus rectangle
+          focusRect.style.display = 'none';
+        } else {
+          // Hide focus point, keep showing rectangle
+          focusPoint.style.display = 'none';
+        }
         
-        // Hide focus rectangle
-        focusRect.style.display = 'none';
-      } else {
-        // Hide focus point, keep showing rectangle
-        focusPoint.style.display = 'none';
-      }
-      
-      isDragging = false;
-    });
-    
-    previewCanvas.addEventListener('mouseleave', () => {
-      if (isDragging) {
         isDragging = false;
-      }
-    });
+      });
+      
+      previewCanvas.addEventListener('mouseleave', () => {
+        if (isDragging) {
+          isDragging = false;
+        }
+      });
+    }
     
     // Functions
     function clearFocusArea() {
@@ -783,6 +812,7 @@
       focusRect.style.display = 'none';
     }
     
+    // COMPLETELY REVISED: File upload handling
     function handleFileUpload(file) {
       if (!file || !file.type.startsWith('image/')) {
         alert('Please select a valid image file');
@@ -801,8 +831,8 @@
             height: img.height
           };
           
-          // Set up the preview canvas
-          setupPreviewCanvas(img);
+          // First show the image directly using an img tag
+          previewImage.src = e.target.result;
           
           // Update UI
           sourceInfoEl.textContent = `${img.width} × ${img.height} pixels | ${(file.size / (1024 * 1024)).toFixed(2)} MB`;
@@ -816,34 +846,6 @@
         img.src = e.target.result;
       };
       reader.readAsDataURL(file);
-    }
-    
-    function setupPreviewCanvas(img) {
-      // Determine canvas size while maintaining aspect ratio
-      const maxWidth = previewContainer.clientWidth;
-      const maxHeight = 400;
-      
-      let canvasWidth = img.width;
-      let canvasHeight = img.height;
-      
-      // Scale down if necessary
-      if (canvasWidth > maxWidth) {
-        const scale = maxWidth / canvasWidth;
-        canvasWidth = maxWidth;
-        canvasHeight = img.height * scale;
-      }
-      
-      if (canvasHeight > maxHeight) {
-        const scale = maxHeight / canvasHeight;
-        canvasHeight = maxHeight;
-        canvasWidth = canvasWidth * scale;
-      }
-      
-      previewCanvas.width = canvasWidth;
-      previewCanvas.height = canvasHeight;
-      
-      // Draw image on canvas
-      previewCtx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
     }
     
     function updateSelectedFormats() {
@@ -1053,15 +1055,15 @@
             ruleOfThirds: false,  // Disable rule of thirds when focus area is used
             boost: [
               { name: 'face', weight: options.faceWeight * 0.5 || 0.4 }, // Reduce weight of faces
-              { name: 'edge', weight: options.edgeWeight * 0.5 || 0.2 }  // Reduce weight of edges
-            ],
-            boost: [{
-              x: imageFocusArea.x,
-              y: imageFocusArea.y,
-              width: imageFocusArea.width,
-              height: imageFocusArea.height,
-              weight: 1.0 // Give highest priority to focus area
-            }]
+              { name: 'edge', weight: options.edgeWeight * 0.5 || 0.2 },  // Reduce weight of edges
+              {
+                x: imageFocusArea.x,
+                y: imageFocusArea.y,
+                width: imageFocusArea.width,
+                height: imageFocusArea.height,
+                weight: 1.0 // Give highest priority to focus area
+              }
+            ]
           };
           
           try {
