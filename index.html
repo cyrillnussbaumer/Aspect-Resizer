@@ -47,11 +47,22 @@
       transition: background 0.3s;
     }
     .drop-area:hover { background: #f1f3f5; }
-    input[type="number"] { 
+    
+    /* FIXED: Number input styling */
+    input.numeric-only {
       width: 80px;
       padding: 8px;
       margin: 5px;
+      -moz-appearance: textfield; /* Firefox */
     }
+    
+    /* Hide spinner for other browsers */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    
     input[type="text"] { 
       width: 150px;
       padding: 8px;
@@ -302,10 +313,14 @@
       <h2>Custom Size</h2>
       <div>
         <div>
-          <label>Width (px): <input type="number" id="custom-width" min="1" max="3000"></label>
+          <label>Width: 
+            <input type="text" class="numeric-only" id="custom-width" placeholder="px">
+          </label>
         </div>
         <div>
-          <label>Height (px): <input type="number" id="custom-height" min="1" max="3000"></label>
+          <label>Height: 
+            <input type="text" class="numeric-only" id="custom-height" placeholder="px">
+          </label>
         </div>
         <div>
           <label>Name: <input type="text" id="custom-name" placeholder="e.g., Twitter Post"></label>
@@ -488,12 +503,54 @@
     const clearAllBtn = document.getElementById('clear-all');
     const useSmartcropToggle = document.getElementById('use-smartcrop');
     const useFocusAreaToggle = document.getElementById('use-focus-area');
-    const faceWeightInput = document.getElementById('face-weight');
-    const edgeWeightInput = document.getElementById('edge-weight');
     const previewContainer = document.getElementById('preview-container');
     const focusPoint = document.getElementById('focus-point');
     const focusRect = document.getElementById('focus-rect');
     const clearFocusBtn = document.getElementById('clear-focus');
+    
+    // ADDED: Make numeric inputs only accept numbers
+    function setupNumericInputs() {
+      // Get all numeric-only inputs
+      const numericInputs = document.querySelectorAll('.numeric-only');
+      
+      numericInputs.forEach(input => {
+        // Only allow numbers on keydown
+        input.addEventListener('keydown', function(e) {
+          // Allow: backspace, delete, tab, escape, enter
+          if ([46, 8, 9, 27, 13].indexOf(e.keyCode) !== -1 ||
+              // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+              (e.keyCode === 65 && e.ctrlKey === true) ||
+              (e.keyCode === 67 && e.ctrlKey === true) ||
+              (e.keyCode === 86 && e.ctrlKey === true) ||
+              (e.keyCode === 88 && e.ctrlKey === true) ||
+              // Allow: home, end, left, right
+              (e.keyCode >= 35 && e.keyCode <= 39)) {
+            // Let it happen, don't do anything
+            return;
+          }
+          
+          // Ensure that it's a number and stop the keypress if not
+          if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && 
+              (e.keyCode < 96 || e.keyCode > 105)) {
+            e.preventDefault();
+          }
+        });
+        
+        // Clean up on paste to ensure only numbers
+        input.addEventListener('paste', function(e) {
+          e.preventDefault();
+          const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+          if (/^\d*$/.test(pastedText)) {
+            this.value = pastedText;
+          }
+        });
+        
+        // Filter non-numeric on input (for any events we might have missed)
+        input.addEventListener('input', function() {
+          this.value = this.value.replace(/[^0-9]/g, '');
+        });
+      });
+    }
     
     // IMPROVED: Coordinate system functions for better positioning
     
@@ -664,14 +721,23 @@
     // Clear focus area
     clearFocusBtn.addEventListener('click', clearFocusArea);
     
-    // Add custom format
+    // FIXED: Input validation for custom format
     addCustomBtn.addEventListener('click', () => {
-      const width = parseInt(customWidthInput.value);
-      const height = parseInt(customHeightInput.value);
+      const widthInput = customWidthInput.value.trim();
+      const heightInput = customHeightInput.value.trim();
+      
+      // Validate numeric input only
+      if (!widthInput || !heightInput) {
+        alert('Please enter values for both width and height');
+        return;
+      }
+      
+      const width = parseInt(widthInput);
+      const height = parseInt(heightInput);
       const name = customNameInput.value.trim() || `Custom (${width}×${height})`;
       
-      if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
-        alert('Please enter valid dimensions');
+      if (width <= 0 || height <= 0) {
+        alert('Dimensions must be greater than 0 pixels');
         return;
       }
       
@@ -1245,6 +1311,7 @@
     // Initialize the app
     buildFormatSelectors();
     updateSelectedFormats();
+    setupNumericInputs(); // ADDED: Initialize numeric input restrictions
   </script>
 </body>
 </html>
