@@ -105,6 +105,20 @@
     .platform-header:hover {
       background: #e9ecef;
     }
+    
+    /* Improved chevron styling */
+    .toggle-icon {
+      color: #6c757d;
+      font-size: 18px; /* Bigger chevron */
+      transition: transform 0.2s ease;
+      user-select: none;
+      transform-origin: center; /* Center the rotation */
+      display: inline-block; /* Needed for transform-origin to work properly */
+    }
+    
+    .toggle-icon.expanded {
+      transform: rotate(90deg);
+    }
     .platform-content {
       padding: 8px 15px;
       display: none;
@@ -175,21 +189,20 @@
       color: #6c757d;
     }
     
-    /* Image preview with focus point selector */
+    /* IMPROVED: Image preview with exact-fit container */
     .image-preview-container {
       position: relative;
       margin: 15px auto;
-      max-width: 100%;
-      overflow: hidden;
       border: 1px solid #dee2e6;
       background-color: #f1f3f5;
+      display: inline-block; /* Changed: Container fits content exactly */
+      overflow: visible;
     }
     
     .image-preview-canvas {
       display: block;
       max-width: 100%;
       max-height: 400px;
-      margin: 0 auto;
       cursor: crosshair;
     }
     
@@ -203,6 +216,7 @@
       transform: translate(-50%, -50%);
       pointer-events: none;
       display: none;
+      z-index: 10; /* Added to ensure visibility */
     }
     
     .focus-rect {
@@ -211,6 +225,7 @@
       background: rgba(255, 51, 51, 0.1);
       pointer-events: none;
       display: none;
+      z-index: 10; /* Added to ensure visibility */
     }
     
     .focus-controls {
@@ -310,19 +325,7 @@
         </div>
         
         <div id="smartcrop-settings">
-          <p style="margin: 5px 0; font-size: 13px;">SmartCrop detects faces and important content</p>
-          
-          <div class="crop-settings">
-            <div class="crop-setting-group">
-              <label for="face-weight">Face Detection</label>
-              <input type="range" id="face-weight" min="0" max="1" step="0.1" value="0.9">
-            </div>
-            
-            <div class="crop-setting-group">
-              <label for="edge-weight">Edge Detection</label>
-              <input type="range" id="edge-weight" min="0" max="1" step="0.1" value="0.5">
-            </div>
-          </div>
+          <p style="margin: 5px 0; font-size: 13px;">SmartCrop uses advanced algorithms to detect interesting content</p>
         </div>
         
         <div class="crop-toggle" style="margin-top: 10px;">
@@ -492,6 +495,51 @@
     const focusRect = document.getElementById('focus-rect');
     const clearFocusBtn = document.getElementById('clear-focus');
     
+    // IMPROVED: Coordinate system functions for better positioning
+    
+    /**
+     * Get selection coordinates in canvas/image space (for actual functionality)
+     * This maintains the original logic for image processing
+     */
+    function getSelectionCoordinates(canvas, event) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      
+      return {
+        x: (event.clientX - rect.left) * scaleX,
+        y: (event.clientY - rect.top) * scaleY
+      };
+    }
+    
+    /**
+     * Get visual feedback coordinates relative to the canvas (simplified)
+     * Now that container fits exactly, we can use canvas coordinates directly
+     */
+    function getVisualFeedbackCoordinates(canvas, event) {
+      const rect = canvas.getBoundingClientRect();
+      
+      return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      };
+    }
+    
+    /**
+     * Convert canvas coordinates to visual coordinates (simplified)
+     * Since container now fits exactly, this is much simpler
+     */
+    function canvasToVisualCoordinates(canvas, canvasX, canvasY) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = rect.width / canvas.width;
+      const scaleY = rect.height / canvas.height;
+      
+      return {
+        x: canvasX * scaleX,
+        y: canvasY * scaleY
+      };
+    }
+    
     // Build platform sections
     function buildFormatSelectors() {
       formatSelector.innerHTML = '';
@@ -505,7 +553,7 @@
         header.className = 'platform-header';
         header.innerHTML = `
           <span>${platform.name}</span>
-          <span class="toggle-icon">▶</span>
+          <span class="toggle-icon">›</span>
         `;
         
         const content = document.createElement('div');
@@ -543,9 +591,16 @@
         
         // Toggle section
         header.addEventListener('click', () => {
+          const isExpanded = content.classList.contains('show');
+          const toggleIcon = header.querySelector('.toggle-icon');
+          
           content.classList.toggle('show');
-          header.querySelector('.toggle-icon').textContent = 
-            content.classList.contains('show') ? '▼' : '▶';
+          
+          if (isExpanded) {
+            toggleIcon.classList.remove('expanded');
+          } else {
+            toggleIcon.classList.add('expanded');
+          }
         });
         
         // Platform select/clear buttons
@@ -566,9 +621,8 @@
         });
       });
       
-      // Auto-expand first platform
-      document.querySelector('.platform-content').classList.add('show');
-      document.querySelector('.platform-header .toggle-icon').textContent = '▼';
+      // Remove auto-expansion - all sections start closed
+      // (Removed the code that auto-expanded first platform)
       
       // Add event listeners to all checkboxes
       document.querySelectorAll('.format-checkbox').forEach(checkbox => {
@@ -680,7 +734,7 @@
       updateSelectedFormats();
     });
     
-    // COMPLETELY REVISED: Image loading and canvas interaction
+    // IMPROVED: Image loading and canvas interaction with fixed positioning
     
     // When the image is first loaded, show it directly in an img tag
     previewImage.addEventListener('load', function() {
@@ -703,66 +757,73 @@
       previewImage.style.display = 'none';
       previewCanvas.style.display = 'block';
       
+      // Ensure the container wraps around the image exactly
+      previewContainer.style.textAlign = 'center'; // Center the container itself
+      
       // Attach mouse events to canvas for focus selection
       setupCanvasInteraction();
     }
     
+    // IMPROVED: Canvas interaction with fixed coordinate systems
     function setupCanvasInteraction() {
       // Preview canvas mouse events for focus point selection
       previewCanvas.addEventListener('mousedown', (e) => {
-        const rect = previewCanvas.getBoundingClientRect();
-        const scaleX = previewCanvas.width / rect.width;
-        const scaleY = previewCanvas.height / rect.height;
+        e.preventDefault(); // Prevent any default behaviors
         
-        // Calculate mouse position relative to canvas
-        dragStart.x = (e.clientX - rect.left) * scaleX;
-        dragStart.y = (e.clientY - rect.top) * scaleY;
+        // Get coordinates for actual selection (unchanged original logic)
+        const selectionCoords = getSelectionCoordinates(previewCanvas, e);
+        dragStart.x = selectionCoords.x;
+        dragStart.y = selectionCoords.y;
         
         isDragging = true;
         
         // Clear previous focus area
         clearFocusArea();
         
-        // Show focus rectangle
+        // FIXED: Get accurate coordinates for visual feedback
+        const visualCoords = getVisualFeedbackCoordinates(previewCanvas, e);
+        
+        // Show focus rectangle at correct visual position
         focusRect.style.display = 'block';
-        focusRect.style.left = `${e.clientX - rect.left}px`;
-        focusRect.style.top = `${e.clientY - rect.top}px`;
+        focusRect.style.left = `${visualCoords.x}px`;
+        focusRect.style.top = `${visualCoords.y}px`;
         focusRect.style.width = '0';
         focusRect.style.height = '0';
       });
       
       previewCanvas.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
+        e.preventDefault();
         
-        const rect = previewCanvas.getBoundingClientRect();
-        const currentX = e.clientX - rect.left;
-        const currentY = e.clientY - rect.top;
+        // FIXED: Get accurate coordinates for visual feedback
+        const currentVisualCoords = getVisualFeedbackCoordinates(previewCanvas, e);
         
-        // Calculate rectangle dimensions
-        const startX = Math.min(currentX, dragStart.x / (previewCanvas.width / rect.width));
-        const startY = Math.min(currentY, dragStart.y / (previewCanvas.height / rect.height));
-        const width = Math.abs(currentX - dragStart.x / (previewCanvas.width / rect.width));
-        const height = Math.abs(currentY - dragStart.y / (previewCanvas.height / rect.height));
+        // Calculate start position in visual coordinates for display
+        const startVisualCoords = canvasToVisualCoordinates(previewCanvas, dragStart.x, dragStart.y);
         
-        // Update focus rectangle
-        focusRect.style.left = `${startX}px`;
-        focusRect.style.top = `${startY}px`;
-        focusRect.style.width = `${width}px`;
-        focusRect.style.height = `${height}px`;
+        // Calculate rectangle dimensions for visual feedback
+        const rectLeft = Math.min(currentVisualCoords.x, startVisualCoords.x);
+        const rectTop = Math.min(currentVisualCoords.y, startVisualCoords.y);
+        const rectWidth = Math.abs(currentVisualCoords.x - startVisualCoords.x);
+        const rectHeight = Math.abs(currentVisualCoords.y - startVisualCoords.y);
+        
+        // Update focus rectangle visual feedback
+        focusRect.style.left = `${rectLeft}px`;
+        focusRect.style.top = `${rectTop}px`;
+        focusRect.style.width = `${rectWidth}px`;
+        focusRect.style.height = `${rectHeight}px`;
       });
       
       previewCanvas.addEventListener('mouseup', (e) => {
         if (!isDragging) return;
+        e.preventDefault();
         
-        const rect = previewCanvas.getBoundingClientRect();
-        const scaleX = previewCanvas.width / rect.width;
-        const scaleY = previewCanvas.height / rect.height;
+        // UNCHANGED: Keep original selection logic for actual functionality
+        const endCoords = getSelectionCoordinates(previewCanvas, e);
+        const endX = endCoords.x;
+        const endY = endCoords.y;
         
-        // Calculate mouse position relative to canvas
-        const endX = (e.clientX - rect.left) * scaleX;
-        const endY = (e.clientY - rect.top) * scaleY;
-        
-        // Calculate focus area in image coordinates
+        // Calculate focus area in image coordinates (UNCHANGED)
         focusArea = {
           x: Math.min(dragStart.x, endX),
           y: Math.min(dragStart.y, endY),
@@ -770,12 +831,12 @@
           height: Math.abs(endY - dragStart.y)
         };
         
-        // If the area is too small, treat it as a point
+        // If the area is too small, treat it as a point (UNCHANGED logic)
         if (focusArea.width < 10 && focusArea.height < 10) {
           const centerX = focusArea.x;
           const centerY = focusArea.y;
           
-          // Create a small region around the point
+          // Create a small region around the point (UNCHANGED)
           focusArea = {
             x: centerX - 25,
             y: centerY - 25,
@@ -783,10 +844,12 @@
             height: 50
           };
           
-          // Show focus point indicator
+          // FIXED: Accurate visual positioning of the focus point
+          const visualCoords = getVisualFeedbackCoordinates(previewCanvas, e);
+          
           focusPoint.style.display = 'block';
-          focusPoint.style.left = `${centerX / scaleX}px`;
-          focusPoint.style.top = `${centerY / scaleY}px`;
+          focusPoint.style.left = `${visualCoords.x}px`;
+          focusPoint.style.top = `${visualCoords.y}px`;
           
           // Hide focus rectangle
           focusRect.style.display = 'none';
@@ -812,7 +875,7 @@
       focusRect.style.display = 'none';
     }
     
-    // COMPLETELY REVISED: File upload handling
+    // File upload handling
     function handleFileUpload(file) {
       if (!file || !file.type.startsWith('image/')) {
         alert('Please select a valid image file');
@@ -894,19 +957,17 @@
       try {
         const useSmartcrop = useSmartcropToggle.checked;
         const useFocusArea = useFocusAreaToggle.checked && focusArea;
-        const faceWeight = parseFloat(faceWeightInput.value);
-        const edgeWeight = parseFloat(edgeWeightInput.value);
         
         for (const format of selectedFormats) {
           let result;
           
           if (useSmartcrop && !useFocusArea) {
             // Use SmartCrop.js alone
-            result = await smartCropImage(sourceImage.element, format, { faceWeight, edgeWeight });
+            result = await smartCropImage(sourceImage.element, format);
           } else if (useFocusArea) {
             // Use focus area with or without SmartCrop
             result = await focusAreaCropImage(sourceImage.element, format, {
-              useSmartcrop, faceWeight, edgeWeight
+              useSmartcrop
             });
           } else {
             // Use basic center crop
@@ -983,7 +1044,7 @@
       });
     }
     
-    // SmartCrop.js implementation
+    // SmartCrop.js implementation (simplified - no fake sliders)
     function smartCropImage(img, format, options = {}) {
       return new Promise((resolve, reject) => {
         // Create options for SmartCrop
@@ -991,11 +1052,9 @@
           width: format.width,
           height: format.height,
           minScale: 1.0,
-          ruleOfThirds: true,
-          boost: [
-            { name: 'face', weight: options.faceWeight || 0.9 },
-            { name: 'edge', weight: options.edgeWeight || 0.5 }
-          ]
+          ruleOfThirds: true
+          // Note: SmartCrop.js doesn't support adjustable face/edge weights
+          // It uses built-in algorithms to detect interesting content
         };
         
         // Use SmartCrop to analyze the image
@@ -1054,8 +1113,6 @@
             minScale: 1.0,
             ruleOfThirds: false,  // Disable rule of thirds when focus area is used
             boost: [
-              { name: 'face', weight: options.faceWeight * 0.5 || 0.4 }, // Reduce weight of faces
-              { name: 'edge', weight: options.edgeWeight * 0.5 || 0.2 },  // Reduce weight of edges
               {
                 x: imageFocusArea.x,
                 y: imageFocusArea.y,
