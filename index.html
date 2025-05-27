@@ -908,12 +908,15 @@
         checkbox.addEventListener('change', updateSelectedFormats);
         checkbox.addEventListener('mousedown', (e) => {
           isMouseDown = true;
-          shouldCheck = !checkbox.checked;
-          checkbox.checked = shouldCheck;
-          updateSelectedFormats();
-          e.preventDefault();
-        });
 
+          // Check if it’s the primary (left) mouse button
+          if (e.button === 0) {
+            shouldCheck = !checkbox.checked;
+            checkbox.checked = shouldCheck;
+            updateSelectedFormats();
+          e.preventDefault(); // Prevents text selection, but allows normal click
+          }
+      });
         checkbox.addEventListener('mouseenter', () => {
           if (isMouseDown) {
             checkbox.checked = shouldCheck;    // Check/uncheck as we drag
