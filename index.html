@@ -3,152 +3,390 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart AdSizer Lite</title>
+  <title>ASPECT - Smart Resizer</title>
   <!-- SmartCrop.js - loaded once from CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/smartcrop/2.0.3/smartcrop.min.js"></script>
   <style>
-    /* Core styles */
+    /* Reset and Base Styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
-      background: #f8f9fa;
-      color: #333;
+      font-family: Amina, Arial, sans-serif;
+      background-color: #f9f9f9;
+      color: #2a2a2a;
       line-height: 1.5;
     }
-    h1, h2, h3 { margin-top: 0; }
-    h1, h2 { text-align: center; }
-    button {
-      background: #0d6efd;
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      border-radius: 4px;
-      cursor: pointer;
-      margin: 5px;
-    }
-    button:hover { background: #0b5ed7; }
-    button:disabled { background: #6c757d; cursor: not-allowed; }
-    .container { display: flex; flex-wrap: wrap; gap: 20px; }
-    .panel {
-      background: white;
-      border-radius: 8px;
-      padding: 15px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
-    }
-    .drop-area {
-      border: 2px dashed #ccc;
-      border-radius: 5px;
-      padding: 25px;
-      text-align: center;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    .drop-area:hover { background: #f1f3f5; }
     
-    /* FIXED: Number input styling */
-    input.numeric-only {
-      width: 80px;
-      padding: 8px;
-      margin: 5px;
+    /* Typography */
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    
+    h2 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    
+    h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    
+    p {
+      font-size: 16px;
+      margin-bottom: 16px;
+    }
+    
+    /* Layout */
+    .app-container {
+      display: flex;
+      flex-direction: row;
+      width: 100%;
+      min-height: 100vh;
+    }
+    
+    .workspace {
+      flex: 1;
+      padding: 32px;
+      background-color: #ffffff;
+    }
+    
+    .sidebar {
+      width: 360px;
+      background-color: #6546fc;
+      color: white;
+      padding: 32px 24px;
+      overflow-y: auto;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+      border-bottom: 1px solid #eaeaea;
+      padding-bottom: 24px;
+    }
+    
+    .sidebar .header {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    /* Buttons */
+    button {
+      font-family: Amina, Arial, sans-serif;
+      border: none;
+      border-radius: 50px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .btn-primary {
+      background-color: #6546fc;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background-color: #5438d8;
+    }
+    
+    .btn-secondary {
+      background-color: rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background-color: rgba(255, 255, 255, 0.3);
+    }
+    
+    .btn-white {
+      background-color: white;
+      color: #6546fc;
+    }
+    
+    .btn-white:hover {
+      background-color: #f0f0f0;
+    }
+    
+    .btn-danger {
+      background-color: #ff4f42;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background-color: #e03c30;
+    }
+    
+    .btn-success {
+      background-color: #00dec9;
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background-color: #00c4b2;
+    }
+    
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    /* Form Controls */
+    input[type="text"], 
+    input[type="number"] {
+      font-family: Amina, Arial, sans-serif;
+      width: 100%;
+      padding: 10px 16px;
+      border: 1px solid #2a2a2a;
+      border-radius: 4px;
+      font-size: 14px;
+      background-color: transparent;
+      color: inherit;
+      transition: all 0.2s ease;
+    }
+    
+    .sidebar input[type="text"],
+    .sidebar input[type="number"] {
+      border-color: rgba(255, 255, 255, 0.3);
+      color: white;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: #6546fc;
+    }
+    
+    .sidebar input:focus {
+      border-color: white;
+    }
+    
+    label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+    
+    /* Numeric inputs */
+    .numeric-only {
+      appearance: textfield; /* Standard property */
+      -webkit-appearance: textfield; /* Safari/Chrome */
       -moz-appearance: textfield; /* Firefox */
     }
     
-    /* Hide spinner for other browsers */
     input::-webkit-outer-spin-button,
     input::-webkit-inner-spin-button {
       -webkit-appearance: none;
       margin: 0;
     }
     
-    input[type="text"] { 
-      width: 150px;
-      padding: 8px;
-      margin: 5px;
-    }
-    .checkbox-group {
+    /* Checkboxes */
+    .checkbox-label {
       display: flex;
-      flex-direction: column;
-      gap: 5px;
-      margin-bottom: 15px;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-    .preview-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 15px;
-    }
-    .preview-item {
-      display: flex;
-      flex-direction: column;
       align-items: center;
-    }
-    .preview-image {
-      max-width: 100%;
-      border: 1px solid #dee2e6;
-      border-radius: 4px;
-    }
-    img { max-width: 100%; }
-    .source-info {
-      text-align: center;
-      font-size: 14px;
-      color: #6c757d;
+      margin-bottom: 8px;
+      cursor: pointer;
     }
     
-    /* Collapsible section styles */
-    .platform-section {
-      margin-bottom: 8px;
-      border: 1px solid #dee2e6;
-      border-radius: 4px;
+    .checkbox-label input[type="checkbox"] {
+      margin-right: 8px;
     }
-    .platform-header {
-      background: #f8f9fa;
-      padding: 8px 15px;
+    
+    /* Dropzone */
+    .drop-area {
+      border: 2px dashed #d0d0d0;
+      border-radius: 8px;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 32px;
+    }
+    
+    .drop-area:hover {
+      border-color: #6546fc;
+      background-color: rgba(101, 70, 252, 0.05);
+    }
+    
+    /* Format Sections */
+    .format-section {
+      margin-bottom: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .format-header {
+      padding: 12px 16px;
       cursor: pointer;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-weight: bold;
-    }
-    .platform-header:hover {
-      background: #e9ecef;
+      background-color: rgba(255, 255, 255, 0.1);
     }
     
-    /* Improved chevron styling */
+    .format-content {
+      padding: 12px 16px;
+      display: none;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .format-content.show {
+      display: block;
+    }
+    
+    .format-controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .format-controls button {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+    
+    /* Toggle icon */
     .toggle-icon {
-      color: #6c757d;
-      font-size: 18px; /* Bigger chevron */
+      font-size: 18px;
       transition: transform 0.2s ease;
-      user-select: none;
-      transform-origin: center; /* Center the rotation */
-      display: inline-block; /* Needed for transform-origin to work properly */
+      display: inline-block;
     }
     
     .toggle-icon.expanded {
       transform: rotate(90deg);
     }
-    .platform-content {
-      padding: 8px 15px;
-      display: none;
-    }
-    .platform-content.show {
-      display: block;
+    
+    /* Checkbox Group */
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+      max-height: 200px;
+      overflow-y: auto;
     }
     
-    /* Select all buttons */
-    .format-controls {
-      display: flex;
-      justify-content: flex-end;
-      margin-bottom: 10px;
-      gap: 5px;
+    /* Custom Size Section */
+    .custom-size {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
     }
-    .format-controls button {
+    
+    .custom-size-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .custom-size-form .full-width {
+      grid-column: 1 / -1;
+    }
+    
+    /* Image Preview */
+    .image-preview-container {
+      position: relative;
+      margin: 24px auto;
+      border: 1px solid #eaeaea;
+      background-color: #fafafa;
+      display: inline-block;
+      overflow: visible;
+      max-width: 100%;
+    }
+    
+    .image-preview-canvas {
+      display: block;
+      max-width: 100%;
+      max-height: 500px;
+      cursor: crosshair;
+    }
+    
+    .focus-point {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      background: rgba(255, 79, 66, 0.5);
+      border: 2px solid #ff4f42;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      display: none;
+      z-index: 10;
+    }
+    
+    .focus-rect {
+      position: absolute;
+      border: 2px dashed #ff4f42;
+      background: rgba(255, 79, 66, 0.1);
+      pointer-events: none;
+      display: none;
+      z-index: 10;
+    }
+    
+    .focus-controls {
+      text-align: center;
+      margin: 16px 0;
+    }
+    
+    .source-info {
+      text-align: center;
+      font-size: 14px;
+      color: #6c757d;
+      margin: 16px 0;
+    }
+    
+    /* Results Header */
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    /* Results Grid */
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 24px;
+      margin-top: 24px;
+    }
+    
+    .preview-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .preview-image {
+      width: 100%;
+      border: 1px solid #eaeaea;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    
+    .format-name {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+    
+    .format-dimensions {
       font-size: 12px;
-      padding: 5px 10px;
-      background: #6c757d;
+      color: #6c757d;
+      margin-bottom: 8px;
+      text-align: center;
     }
     
     /* Processing indicator */
@@ -162,195 +400,145 @@
       animation: spin 1s ease-in-out infinite;
       margin-right: 5px;
     }
+    
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
     
     /* Crop options */
     .crop-options {
-      margin: 10px 0;
-      padding: 10px;
-      background: #f8f9fa;
-      border-radius: 4px;
-      border: 1px solid #dee2e6;
+      margin: 24px 0;
     }
     
     .crop-toggle {
       display: flex;
       align-items: center;
-      gap: 5px;
-      margin-bottom: 10px;
+      gap: 8px;
+      margin-bottom: 12px;
     }
     
-    .crop-settings {
+    /* Action Buttons */
+    .action-buttons {
+      margin-top: 24px;
       display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 10px;
+      gap: 12px;
     }
     
-    .crop-setting-group {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    
-    .crop-setting-group label {
-      font-size: 12px;
-      color: #6c757d;
-    }
-    
-    /* IMPROVED: Image preview with exact-fit container */
-    .image-preview-container {
-      position: relative;
-      margin: 15px auto;
-      border: 1px solid #dee2e6;
-      background-color: #f1f3f5;
-      display: inline-block; /* Changed: Container fits content exactly */
-      overflow: visible;
-    }
-    
-    .image-preview-canvas {
-      display: block;
-      max-width: 100%;
-      max-height: 400px;
-      cursor: crosshair;
-    }
-    
-    .focus-point {
-      position: absolute;
-      width: 30px;
-      height: 30px;
-      background: rgba(255, 0, 0, 0.5);
-      border: 2px solid red;
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-      display: none;
-      z-index: 10; /* Added to ensure visibility */
-    }
-    
-    .focus-rect {
-      position: absolute;
-      border: 2px dashed #ff3333;
-      background: rgba(255, 51, 51, 0.1);
-      pointer-events: none;
-      display: none;
-      z-index: 10; /* Added to ensure visibility */
-    }
-    
-    .focus-controls {
-      text-align: center;
-      margin-top: 10px;
-    }
-    
-    .focus-controls button {
-      font-size: 13px;
-      padding: 5px 10px;
-    }
-    
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-      .container { flex-direction: column; }
+    /* Responsive */
+    @media (max-width: 640px) {
+      .app-container {
+        flex-direction: column;
+      }
+      
+      .workspace {
+        order: 2;
+        padding: 24px 16px;
+      }
+      
+      .sidebar {
+        width: 100%;
+        order: 1;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>Smart AdSizer Lite</h1>
-  <p style="text-align: center;">Automatically crop images to popular social media formats</p>
-
-  <div class="container">
-    <div class="panel" style="flex: 2;">
+  <div class="app-container">
+    <div class="workspace">
+      <div class="header">
+        <h1>ASPECT</h1>
+        <p>Smart Resizer</p>
+      </div>
+      
       <div id="upload-area" class="drop-area">
         <p>Click or drop an image here</p>
         <input type="file" id="file-input" accept="image/*" style="display:none;">
       </div>
       
-      <div id="source-preview" style="display:none; margin-top: 20px;">
+      <div id="source-preview" style="display:none;">
         <h2>Source Image</h2>
         <div style="text-align: center;">
           <!-- Use a regular img element for the initial preview -->
           <div class="image-preview-container" id="preview-container">
-            <img id="preview-image" style="display:block; max-width:100%; max-height:400px; margin:0 auto;">
+            <img id="preview-image" style="display:block; max-width:100%; max-height:500px; margin:0 auto;">
             <canvas id="preview-canvas" class="image-preview-canvas" style="display:none;"></canvas>
             <div id="focus-point" class="focus-point"></div>
             <div id="focus-rect" class="focus-rect"></div>
           </div>
           
           <div class="focus-controls">
-            <button id="clear-focus">Clear Focus Area</button>
+            <button id="clear-focus" class="btn-danger">Clear Focus Area</button>
             <span style="margin: 0 10px; font-size: 13px; color: #6c757d;">
               Click and drag to select focus area
             </span>
           </div>
           
           <p id="source-info" class="source-info"></p>
-          <button id="change-image">Change Image</button>
+          <button id="change-image" class="btn-primary">Change Image</button>
         </div>
       </div>
       
-      <div id="results-area" style="display:none; margin-top: 20px;">
-        <h2>Results</h2>
-        <div id="preview-grid" class="preview-grid"></div>
-        <div style="text-align: center; margin-top: 15px;">
-          <button id="download-all">Download All as ZIP</button>
+      <div id="results-area" style="display:none; margin-top: 32px;">
+        <div class="results-header">
+          <h2>Results</h2>
+          <button id="download-all" class="btn-primary">Download All as ZIP</button>
         </div>
+        <div id="preview-grid" class="preview-grid"></div>
       </div>
     </div>
     
-    <div class="panel" style="flex: 1;">
-      <h2>Select Formats</h2>
-      
-      <div class="format-controls">
-        <button id="select-all">Select All</button>
-        <button id="clear-all">Clear All</button>
+    <div class="sidebar">
+      <div class="header">
+        <h2>Select Formats</h2>
+        <div style="display: flex; gap: 8px; justify-content: center;">
+          <button id="select-all" class="btn-secondary">Select All</button>
+          <button id="clear-all" class="btn-secondary">Clear All</button>
+        </div>
       </div>
       
       <div id="format-selector">
         <!-- Platform sections will be added here dynamically -->
       </div>
       
-      <h2>Custom Size</h2>
-      <div>
-        <div>
-          <label>Width: 
-            <input type="text" class="numeric-only" id="custom-width" placeholder="px">
-          </label>
+      <div class="custom-size">
+        <h2>Custom Size</h2>
+        <div class="custom-size-form">
+          <div>
+            <label for="custom-width">Width (px)</label>
+            <input type="text" class="numeric-only" id="custom-width" placeholder="Width">
+          </div>
+          <div>
+            <label for="custom-height">Height (px)</label>
+            <input type="text" class="numeric-only" id="custom-height" placeholder="Height">
+          </div>
+          <div class="full-width">
+            <label for="custom-name">Name</label>
+            <input type="text" id="custom-name" placeholder="e.g., Twitter Post">
+          </div>
         </div>
-        <div>
-          <label>Height: 
-            <input type="text" class="numeric-only" id="custom-height" placeholder="px">
-          </label>
-        </div>
-        <div>
-          <label>Name: <input type="text" id="custom-name" placeholder="e.g., Twitter Post"></label>
-        </div>
-        <button id="add-custom">Add Custom Format</button>
+        <button id="add-custom" class="btn-white">Add Custom Format</button>
       </div>
       
-      <div id="custom-formats" style="margin-top: 10px; display: none;">
+      <div id="custom-formats" style="margin-top: 24px; display: none;">
         <h3>Custom Formats</h3>
         <div class="checkbox-group" id="custom-formats-container"></div>
       </div>
       
       <div class="crop-options">
+        <h3>Crop Options</h3>
         <div class="crop-toggle">
           <input type="checkbox" id="use-smartcrop" checked>
-          <label for="use-smartcrop">Use SmartCrop.js (Content-Aware)</label>
+          <label for="use-smartcrop">Use SmartCrop (Content-Aware)</label>
         </div>
         
-        <div id="smartcrop-settings">
-          <p style="margin: 5px 0; font-size: 13px;">SmartCrop uses advanced algorithms to detect interesting content</p>
-        </div>
-        
-        <div class="crop-toggle" style="margin-top: 10px;">
+        <div class="crop-toggle">
           <input type="checkbox" id="use-focus-area" checked>
           <label for="use-focus-area">Prioritize Selected Focus Area</label>
         </div>
       </div>
       
-      <div style="margin-top: 20px;">
-        <button id="process-button" disabled>Process Image</button>
+      <div class="action-buttons">
+        <button id="process-button" class="btn-white" disabled>Process Image</button>
       </div>
     </div>
   </div>
@@ -364,6 +552,7 @@
     let focusArea = null;  // Will store the focus area coordinates
     let isDragging = false;
     let dragStart = { x: 0, y: 0 };
+    let previewContainerSize = { width: 0, height: 0 };  // Track container size for responsive clearing
     
     // Canvas and context for the preview
     let previewCanvas = document.getElementById('preview-canvas');
@@ -508,7 +697,7 @@
     const focusRect = document.getElementById('focus-rect');
     const clearFocusBtn = document.getElementById('clear-focus');
     
-    // ADDED: Make numeric inputs only accept numbers
+    // Make numeric inputs only accept numbers
     function setupNumericInputs() {
       // Get all numeric-only inputs
       const numericInputs = document.querySelectorAll('.numeric-only');
@@ -552,11 +741,39 @@
       });
     }
     
-    // IMPROVED: Coordinate system functions for better positioning
+    // Set up the ResizeObserver to monitor container size changes
+    function setupResizeObserver() {
+      // Get initial size
+      const rect = previewContainer.getBoundingClientRect();
+      previewContainerSize = {
+        width: rect.width,
+        height: rect.height
+      };
+      
+      // Create observer to watch for size changes
+      const resizeObserver = new ResizeObserver(entries => {
+        for (let entry of entries) {
+          const { width, height } = entry.contentRect;
+          
+          // If size changed significantly, clear focus area
+          if (Math.abs(width - previewContainerSize.width) > 5 || 
+              Math.abs(height - previewContainerSize.height) > 5) {
+            clearFocusArea();
+            
+            // Update stored size
+            previewContainerSize = { width, height };
+          }
+        }
+      });
+      
+      // Start observing
+      resizeObserver.observe(previewContainer);
+    }
+    
+    // Coordinate system functions for positioning
     
     /**
      * Get selection coordinates in canvas/image space (for actual functionality)
-     * This maintains the original logic for image processing
      */
     function getSelectionCoordinates(canvas, event) {
       const rect = canvas.getBoundingClientRect();
@@ -570,8 +787,7 @@
     }
     
     /**
-     * Get visual feedback coordinates relative to the canvas (simplified)
-     * Now that container fits exactly, we can use canvas coordinates directly
+     * Get visual feedback coordinates relative to the canvas
      */
     function getVisualFeedbackCoordinates(canvas, event) {
       const rect = canvas.getBoundingClientRect();
@@ -583,8 +799,7 @@
     }
     
     /**
-     * Convert canvas coordinates to visual coordinates (simplified)
-     * Since container now fits exactly, this is much simpler
+     * Convert canvas coordinates to visual coordinates
      */
     function canvasToVisualCoordinates(canvas, canvasX, canvasY) {
       const rect = canvas.getBoundingClientRect();
@@ -603,26 +818,26 @@
       
       platforms.forEach(platform => {
         const section = document.createElement('div');
-        section.className = 'platform-section';
+        section.className = 'format-section';
         section.id = `platform-${platform.id}`;
         
         const header = document.createElement('div');
-        header.className = 'platform-header';
+        header.className = 'format-header';
         header.innerHTML = `
           <span>${platform.name}</span>
           <span class="toggle-icon">›</span>
         `;
         
         const content = document.createElement('div');
-        content.className = 'platform-content';
+        content.className = 'format-content';
         content.id = `${platform.id}-content`;
         
         // Platform select buttons
         const platformControls = document.createElement('div');
         platformControls.className = 'format-controls';
         platformControls.innerHTML = `
-          <button class="select-platform" data-platform="${platform.id}">Select All</button>
-          <button class="clear-platform" data-platform="${platform.id}">Clear All</button>
+          <button class="btn-secondary select-platform" data-platform="${platform.id}">Select All</button>
+          <button class="btn-secondary clear-platform" data-platform="${platform.id}">Clear All</button>
         `;
         content.appendChild(platformControls);
         
@@ -632,10 +847,11 @@
         
         platform.formats.forEach(format => {
           const label = document.createElement('label');
+          label.className = 'checkbox-label';
           label.innerHTML = `
             <input type="checkbox" class="format-checkbox" data-platform="${platform.id}" 
                   value="${format.id}" name="format"> 
-            ${format.name} (${format.width}×${format.height})
+            <span>${format.name} (${format.width}×${format.height})</span>
           `;
           checkboxGroup.appendChild(label);
         });
@@ -678,8 +894,9 @@
         });
       });
       
-      // Remove auto-expansion - all sections start closed
-      // (Removed the code that auto-expanded first platform)
+      // Auto-expand first platform section
+      document.querySelector('.format-content').classList.add('show');
+      document.querySelector('.toggle-icon').classList.add('expanded');
       
       // Add event listeners to all checkboxes
       document.querySelectorAll('.format-checkbox').forEach(checkbox => {
@@ -691,14 +908,17 @@
     uploadArea.addEventListener('click', () => fileInput.click());
     uploadArea.addEventListener('dragover', (e) => {
       e.preventDefault();
-      uploadArea.style.background = '#e9ecef';
+      uploadArea.style.borderColor = '#6546fc';
+      uploadArea.style.backgroundColor = 'rgba(101, 70, 252, 0.1)';
     });
     uploadArea.addEventListener('dragleave', () => {
-      uploadArea.style.background = '';
+      uploadArea.style.borderColor = '#d0d0d0';
+      uploadArea.style.backgroundColor = '';
     });
     uploadArea.addEventListener('drop', (e) => {
       e.preventDefault();
-      uploadArea.style.background = '';
+      uploadArea.style.borderColor = '#d0d0d0';
+      uploadArea.style.backgroundColor = '';
       handleFileUpload(e.dataTransfer.files[0]);
     });
     
@@ -721,7 +941,7 @@
     // Clear focus area
     clearFocusBtn.addEventListener('click', clearFocusArea);
     
-    // FIXED: Input validation for custom format
+    // Add custom format
     addCustomBtn.addEventListener('click', () => {
       const widthInput = customWidthInput.value.trim();
       const heightInput = customHeightInput.value.trim();
@@ -752,16 +972,18 @@
       
       // Add to UI
       const newCheckbox = document.createElement('label');
+      newCheckbox.className = 'checkbox-label';
       newCheckbox.innerHTML = `
         <input type="checkbox" class="custom-format-checkbox" value="${id}" checked> 
-        ${name} (${width}×${height})
-        <button class="remove-format" data-id="${id}" style="padding: 2px 5px; font-size: 10px; background: #dc3545;">×</button>
+        <span>${name} (${width}×${height})</span>
+        <button class="btn-danger remove-format" data-id="${id}" style="padding: 2px 5px; font-size: 10px; margin-left: auto;">×</button>
       `;
       customFormatsContainer.appendChild(newCheckbox);
       
       // Add remove event
       newCheckbox.querySelector('.remove-format').addEventListener('click', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         const formatId = e.target.dataset.id;
         customFormats = customFormats.filter(f => f.id !== formatId);
         newCheckbox.remove();
@@ -800,12 +1022,15 @@
       updateSelectedFormats();
     });
     
-    // IMPROVED: Image loading and canvas interaction with fixed positioning
+    // Image loading and canvas interaction
     
     // When the image is first loaded, show it directly in an img tag
     previewImage.addEventListener('load', function() {
       // After image loads, initialize the canvas for interaction
       initializeFocusCanvas();
+      
+      // Set up resize observer after image is loaded
+      setupResizeObserver();
     });
     
     function initializeFocusCanvas() {
@@ -830,13 +1055,13 @@
       setupCanvasInteraction();
     }
     
-    // IMPROVED: Canvas interaction with fixed coordinate systems
+    // Canvas interaction with fixed coordinate systems
     function setupCanvasInteraction() {
       // Preview canvas mouse events for focus point selection
       previewCanvas.addEventListener('mousedown', (e) => {
         e.preventDefault(); // Prevent any default behaviors
         
-        // Get coordinates for actual selection (unchanged original logic)
+        // Get coordinates for actual selection
         const selectionCoords = getSelectionCoordinates(previewCanvas, e);
         dragStart.x = selectionCoords.x;
         dragStart.y = selectionCoords.y;
@@ -846,7 +1071,7 @@
         // Clear previous focus area
         clearFocusArea();
         
-        // FIXED: Get accurate coordinates for visual feedback
+        // Get accurate coordinates for visual feedback
         const visualCoords = getVisualFeedbackCoordinates(previewCanvas, e);
         
         // Show focus rectangle at correct visual position
@@ -861,7 +1086,7 @@
         if (!isDragging) return;
         e.preventDefault();
         
-        // FIXED: Get accurate coordinates for visual feedback
+        // Get accurate coordinates for visual feedback
         const currentVisualCoords = getVisualFeedbackCoordinates(previewCanvas, e);
         
         // Calculate start position in visual coordinates for display
@@ -884,12 +1109,12 @@
         if (!isDragging) return;
         e.preventDefault();
         
-        // UNCHANGED: Keep original selection logic for actual functionality
+        // Keep original selection logic for actual functionality
         const endCoords = getSelectionCoordinates(previewCanvas, e);
         const endX = endCoords.x;
         const endY = endCoords.y;
         
-        // Calculate focus area in image coordinates (UNCHANGED)
+        // Calculate focus area in image coordinates
         focusArea = {
           x: Math.min(dragStart.x, endX),
           y: Math.min(dragStart.y, endY),
@@ -897,12 +1122,12 @@
           height: Math.abs(endY - dragStart.y)
         };
         
-        // If the area is too small, treat it as a point (UNCHANGED logic)
+        // If the area is too small, treat it as a point
         if (focusArea.width < 10 && focusArea.height < 10) {
           const centerX = focusArea.x;
           const centerY = focusArea.y;
           
-          // Create a small region around the point (UNCHANGED)
+          // Create a small region around the point
           focusArea = {
             x: centerX - 25,
             y: centerY - 25,
@@ -910,7 +1135,7 @@
             height: 50
           };
           
-          // FIXED: Accurate visual positioning of the focus point
+          // Accurate visual positioning of the focus point
           const visualCoords = getVisualFeedbackCoordinates(previewCanvas, e);
           
           focusPoint.style.display = 'block';
@@ -1046,13 +1271,14 @@
             name: `${format.name} (${format.width}×${format.height})`
           });
           
-          // Add to preview grid
+          // Add to preview grid with pixel dimensions
           const item = document.createElement('div');
           item.className = 'preview-item';
           item.innerHTML = `
-            <p>${format.name}</p>
             <img src="${result}" alt="${format.name}" class="preview-image">
-            <button class="download-btn" data-index="${resultImages.length - 1}">Download</button>
+            <p class="format-name">${format.name}</p>
+            <p class="format-dimensions">${format.width} × ${format.height}px</p>
+            <button class="btn-primary download-btn" data-index="${resultImages.length - 1}">Download</button>
           `;
           previewGrid.appendChild(item);
           
@@ -1110,7 +1336,7 @@
       });
     }
     
-    // SmartCrop.js implementation (simplified - no fake sliders)
+    // SmartCrop.js implementation
     function smartCropImage(img, format, options = {}) {
       return new Promise((resolve, reject) => {
         // Create options for SmartCrop
@@ -1119,8 +1345,6 @@
           height: format.height,
           minScale: 1.0,
           ruleOfThirds: true
-          // Note: SmartCrop.js doesn't support adjustable face/edge weights
-          // It uses built-in algorithms to detect interesting content
         };
         
         // Use SmartCrop to analyze the image
@@ -1303,7 +1527,7 @@
         const blob = await zip.generateAsync({ type: 'blob' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = 'smart-adsizer-images.zip';
+        link.download = 'aspect-resized-images.zip';
         link.click();
       }
     }
@@ -1311,7 +1535,7 @@
     // Initialize the app
     buildFormatSelectors();
     updateSelectedFormats();
-    setupNumericInputs(); // ADDED: Initialize numeric input restrictions
+    setupNumericInputs();
   </script>
 </body>
 </html>

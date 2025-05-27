@@ -1,6 +1,6 @@
-# Smart AdSizer - Lightweight Social Media Image Formatter
+# ASPECT - Smart Resizer
 
-Smart AdSizer is an ultra-lightweight, dependency-free tool that automatically crops images to fit various social media platform dimensions. It runs entirely in the browser with no server requirements.
+ASPECT is a modern, efficient, flat-design tool that automatically crops and resizes images to fit various social media platform dimensions. It runs entirely in the browser with no server requirements.
 
 ## ✨ Features
 
@@ -10,7 +10,7 @@ Smart AdSizer is an ultra-lightweight, dependency-free tool that automatically c
 - **Bulk Processing:** Crop a single image to multiple formats at once
 - **Custom Sizes:** Add your own custom dimensions for specialized needs
 - **Downloadable Results:** Download individual images or all formats as a ZIP file
-- **User-Friendly Interface:** Organized by platform with collapsible sections
+- **Modern Interface:** Clean, flat design with intuitive platform organization
 - **Offline Capable:** Works without an internet connection
 
 ## 🌐 Supported Platforms
@@ -37,7 +37,7 @@ Smart AdSizer is an ultra-lightweight, dependency-free tool that automatically c
 
 ## 🔍 Smart Cropping Technology
 
-Smart AdSizer uses SmartCrop.js to analyze your images and create intelligent crops:
+ASPECT uses SmartCrop.js to create intelligent crops:
 
 - **Face Detection:** Automatically identifies and preserves faces in your images
 - **Content-Aware:** Detects important visual elements and ensures they remain in the crop
@@ -80,15 +80,14 @@ The entire application can be embedded in an iframe or the code can be integrate
 
 ## 📊 Performance Notes
 
-- For very large images (>10MB or >4000px), processing may take longer
-- The ZIP download functionality loads the JSZip library only when needed
+- The application uses efficient rendering techniques for a smooth experience
+- Focus area selection automatically adjusts when the browser window is resized
 - All processing happens on the client side, so performance depends on the user's device
 - SmartCrop.js adds intelligence with minimal performance impact
 
-## 👨‍💻 Author
 
 Created as an ultra-lightweight alternative to complex image editing tools specifically for social media marketers, content creators, and digital agencies.
 
 ---
 
-*Smart AdSizer - Crop once, post everywhere*
+*ASPECT - Crop once, post everywhere*
