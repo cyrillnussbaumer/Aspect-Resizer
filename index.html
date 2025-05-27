@@ -912,8 +912,16 @@
 
           checkbox.addEventListener('mousedown', (e) => {
             if (e.button !== 0) return; // Only left mouse button
+
             isMouseDown = true;
             shouldCheck = !checkbox.checked;
+
+            // ✅ Apply check/uncheck immediately to the first box
+            checkbox.checked = shouldCheck;
+            updateSelectedFormats();
+
+            // Optional: prevent text selection
+            e.preventDefault();
           });
 
           checkbox.addEventListener('mouseenter', () => {
@@ -930,6 +938,7 @@
           isMouseDown = false;
         });
       }
+
 
       // Call the new setup function after building checkboxes
       setupDragToSelectCheckboxes();
