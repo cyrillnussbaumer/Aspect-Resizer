@@ -898,10 +898,6 @@
         });
       });
       
-      // Auto-expand first platform section
-      document.querySelector('.format-content').classList.add('show');
-      document.querySelector('.toggle-icon').classList.add('expanded');
-      
       // Add event listeners to all checkboxes
       document.querySelectorAll('.format-checkbox').forEach(checkbox => {
         checkbox.addEventListener('change', updateSelectedFormats);
