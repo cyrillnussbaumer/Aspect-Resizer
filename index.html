@@ -564,6 +564,10 @@
     let previewCtx = previewCanvas.getContext('2d');
     let previewImage = document.getElementById('preview-image');
     
+    //Drag to select functionality
+    let isMouseDown = false;
+    let shouldCheck = true;
+
     // Predefined formats organized by platform
     const platforms = [
       {
@@ -902,6 +906,25 @@
       // Add event listeners to all checkboxes
       document.querySelectorAll('.format-checkbox').forEach(checkbox => {
         checkbox.addEventListener('change', updateSelectedFormats);
+        checkbox.addEventListener('mousedown', (e) => {
+          isMouseDown = true;
+          shouldCheck = !checkbox.checked;
+          checkbox.checked = shouldCheck;
+          updateSelectedFormats();
+          e.preventDefault();
+        });
+
+        checkbox.addEventListener('mouseenter', () => {
+          if (isMouseDown) {
+            checkbox.checked = shouldCheck;    // Check/uncheck as we drag
+            updateSelectedFormats();
+          }
+        });
+
+      });
+      // Release function for Drag to select
+      document.addEventListener('mouseup', () => {
+        isMouseDown = false;
       });
     }
     
