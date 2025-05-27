@@ -196,11 +196,14 @@
       align-items: center;
       margin-bottom: 8px;
       cursor: pointer;
+      user-select: none; /* Prevent text selection during drag */
     }
     
     .checkbox-label input[type="checkbox"] {
       margin-right: 8px;
     }
+    
+
     
     /* Dropzone */
     .drop-area {
@@ -564,9 +567,10 @@
     let previewCtx = previewCanvas.getContext('2d');
     let previewImage = document.getElementById('preview-image');
     
-    //Drag to select functionality
-    let isMouseDown = false;
+    //Drag to select functionality - FIXED VARIABLES
+    let isCheckboxDragging = false;
     let shouldCheck = true;
+    let dragStartTime = 0;
 
     // Predefined formats organized by platform
     const platforms = [
@@ -705,6 +709,11 @@
     const focusPoint = document.getElementById('focus-point');
     const focusRect = document.getElementById('focus-rect');
     const clearFocusBtn = document.getElementById('clear-focus');
+    
+    // GLOBAL EVENT LISTENER - only add once to prevent duplicates
+    document.addEventListener('mouseup', () => {
+      isCheckboxDragging = false;
+    });
     
     // Make numeric inputs only accept numbers
     function setupNumericInputs() {
@@ -903,49 +912,70 @@
         });
       });
       
-      // Add event listeners to all checkboxes
-      function setupDragToSelectCheckboxes() {
-        const allCheckboxes = document.querySelectorAll('.format-checkbox, .custom-format-checkbox');
+      // FIXED DRAG-TO-SELECT SETUP - minimal changes only
+      setupDragToSelectCheckboxes();
+    }
+    
+    // FIXED: Intuitive drag-to-select that doesn't break normal clicking
+    function setupDragToSelectCheckboxes() {
+      const allCheckboxes = document.querySelectorAll('.format-checkbox, .custom-format-checkbox');
 
-        allCheckboxes.forEach(checkbox => {
-          checkbox.addEventListener('change', updateSelectedFormats);
+      allCheckboxes.forEach(checkbox => {
+        // Normal change event - always needed
+        checkbox.addEventListener('change', updateSelectedFormats);
 
-          checkbox.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return; // Only left mouse button
+        // Fixed mousedown handler - prevent default checkbox behavior during potential drag
+        checkbox.addEventListener('mousedown', (e) => {
+          if (e.button !== 0) return; // Only left mouse button
+          
+          dragStartTime = Date.now();
+          const startX = e.clientX;
+          const startY = e.clientY;
+          
+          // Track if mouse moves significantly (indicates drag intent)
+          const mouseMoveHandler = (moveEvent) => {
+            const deltaX = Math.abs(moveEvent.clientX - startX);
+            const deltaY = Math.abs(moveEvent.clientY - startY);
+            const timeDiff = Date.now() - dragStartTime;
+            
+            // If mouse moved significantly OR held for a while, start drag mode
+            if ((deltaX > 5 || deltaY > 5) || timeDiff > 200) {
+              // This is a drag - prevent the checkbox from toggling
+              e.preventDefault();
+              isCheckboxDragging = true;
+              shouldCheck = !checkbox.checked; // Opposite of current state
+              checkbox.checked = shouldCheck; // Apply immediately
+              updateSelectedFormats();
+              
+              // Remove this listener since we're now in drag mode
+              document.removeEventListener('mousemove', mouseMoveHandler);
+            }
+          };
+          
+          // Track mouse movement
+          document.addEventListener('mousemove', mouseMoveHandler);
+          
+          // Clean up on mouse up
+          const mouseUpHandler = () => {
+            document.removeEventListener('mousemove', mouseMoveHandler);
+            document.removeEventListener('mouseup', mouseUpHandler);
+          };
+          
+          document.addEventListener('mouseup', mouseUpHandler);
+        });
 
-            isMouseDown = true;
-            shouldCheck = !checkbox.checked;
-
-            // ✅ Apply check/uncheck immediately to the first box
+        // Mouse enter during drag
+        checkbox.addEventListener('mouseenter', () => {
+          if (isCheckboxDragging) {
             checkbox.checked = shouldCheck;
             updateSelectedFormats();
-
-            // Optional: prevent text selection
-            e.preventDefault();
-          });
-
-          checkbox.addEventListener('mouseenter', () => {
-            if (isMouseDown) {
-              checkbox.checked = shouldCheck;
-              updateSelectedFormats();
-            }
-          });
-
-          checkbox.addEventListener('mouseup', updateSelectedFormats);
+          }
         });
 
-        document.addEventListener('mouseup', () => {
-          isMouseDown = false;
+        // Mouse leave - needed for proper drag functionality
+        checkbox.addEventListener('mouseleave', () => {
+          // This ensures mouseenter fires properly on the next checkbox
         });
-      }
-
-
-      // Call the new setup function after building checkboxes
-      setupDragToSelectCheckboxes();
-
-      // Release function for Drag to select
-      document.addEventListener('mouseup', () => {
-        isMouseDown = false;
       });
     }
     
@@ -1044,8 +1074,9 @@
       customHeightInput.value = '';
       customNameInput.value = '';
       
-      // Update selected formats
+      // Update selected formats and setup drag for new checkbox
       updateSelectedFormats();
+      setupDragToSelectCheckboxes();
     });
     
     // Process button
