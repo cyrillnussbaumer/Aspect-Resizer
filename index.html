@@ -904,27 +904,36 @@
       });
       
       // Add event listeners to all checkboxes
-      document.querySelectorAll('.format-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', updateSelectedFormats);
-        checkbox.addEventListener('mousedown', (e) => {
-          isMouseDown = true;
+      function setupDragToSelectCheckboxes() {
+        const allCheckboxes = document.querySelectorAll('.format-checkbox, .custom-format-checkbox');
 
-          // Check if it’s the primary (left) mouse button
-          if (e.button === 0) {
+        allCheckboxes.forEach(checkbox => {
+          checkbox.addEventListener('change', updateSelectedFormats);
+
+          checkbox.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return; // Only left mouse button
+            isMouseDown = true;
             shouldCheck = !checkbox.checked;
-            checkbox.checked = shouldCheck;
-            updateSelectedFormats();
-          e.preventDefault(); // Prevents text selection, but allows normal click
-          }
-      });
-        checkbox.addEventListener('mouseenter', () => {
-          if (isMouseDown) {
-            checkbox.checked = shouldCheck;    // Check/uncheck as we drag
-            updateSelectedFormats();
-          }
+          });
+
+          checkbox.addEventListener('mouseenter', () => {
+            if (isMouseDown) {
+              checkbox.checked = shouldCheck;
+              updateSelectedFormats();
+            }
+          });
+
+          checkbox.addEventListener('mouseup', updateSelectedFormats);
         });
 
-      });
+        document.addEventListener('mouseup', () => {
+          isMouseDown = false;
+        });
+      }
+
+      // Call the new setup function after building checkboxes
+      setupDragToSelectCheckboxes();
+
       // Release function for Drag to select
       document.addEventListener('mouseup', () => {
         isMouseDown = false;
