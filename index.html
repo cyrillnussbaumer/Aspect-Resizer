@@ -207,7 +207,20 @@
     input[type="checkbox"] {
       accent-color: #c1b5fe;
     }
-
+    /* Prevent text selection on interactive UI elements */
+    button, 
+    label, 
+     .format-header,
+     .format-name,
+     .format-dimensions,
+     .drop-area,
+     .sidebar h2,
+     .sidebar h3 {
+       user-select: none;
+       -webkit-user-select: none;
+       -moz-user-select: none;
+       -ms-user-select: none;
+      }
     
     /* Dropzone */
     .drop-area {
