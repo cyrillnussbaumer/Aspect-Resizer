@@ -42,7 +42,6 @@ ASPECT uses SmartCrop.js to create intelligent crops:
 - **Face Detection:** Automatically identifies and preserves faces in your images
 - **Content-Aware:** Detects important visual elements and ensures they remain in the crop
 - **Composition Rules:** Applies the rule of thirds for more aesthetically pleasing results
-- **Customizable:** Adjust face and edge detection weights to fine-tune results
 - **Fallback Option:** Can switch to simple centered crops if preferred
 
 ## ✂️ Custom Formats
@@ -69,11 +68,7 @@ Create your own custom dimensions:
 Simply download the HTML file and open it in your browser. No installation required.
 
 ### Web Server Deployment
-Upload the HTML file to any web server or hosting service:
-- GitHub Pages
-- Netlify
-- Vercel
-- Any standard web hosting
+Upload the HTML file to any web server or hosting service
 
 ### Integration with Existing Sites
 The entire application can be embedded in an iframe or the code can be integrated into an existing page.
